@@ -238,8 +238,11 @@ tstp(int ignored)
     getyx(curscr, y, x);
     mvcur(y, x, oy, ox);
     fflush(stdout);
+    wmove(curscr,oy,ox);
+#ifndef __APPLE__
     curscr->_cury = oy;
     curscr->_curx = ox;
+#endif
 }
 
 /*
