@@ -173,11 +173,15 @@ readchar(struct rogue_state *rs)
         }
         if ( rs != 0 && rs->guiflag != 0 )
         {
-            if (rs->num < sizeof(rs->buffered) )
+            if ( rs->num < sizeof(rs->buffered) )
             {
                 rs->buffered[rs->num++] = ch;
                 if ( rs->num > (sizeof(rs->buffered)*9)/10 && rs->needflush == 0 )
+                {
                     rs->needflush = (uint32_t)time(NULL);
+                    //fprintf(stderr,"needflush.%u %d of %d\n",rs->needflush,rs->num,(int32_t)sizeof(rs->buffered));
+                    //sleep(3);
+                }
             } else fprintf(stderr,"buffer filled without flushed\n");
         }
     } else fprintf(stderr,"readchar rs.%p non-gui error?\n",rs);
