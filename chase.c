@@ -23,7 +23,7 @@ static coord ch_ret;				/* Where chasing takes you */
  *	Make all the running monsters move.
  */
 void
-runners()
+runners(struct rogue_state *rs,int arg)
 {
     register THING *tp;
     THING *next;
@@ -38,10 +38,10 @@ runners()
 	{
 	    orig_pos = tp->t_pos;
 	    wastarget = on(*tp, ISTARGET);
-	    if (move_monst(tp) == -1)
+	    if (move_monst(rs,tp) == -1)
                 continue;
 	    if (on(*tp, ISFLY) && dist_cp(&hero, &tp->t_pos) >= 3)
-		move_monst(tp);
+		move_monst(rs,tp);
 	    if (wastarget && !ce(orig_pos, tp->t_pos))
 	    {
 		tp->t_flags &= ~ISTARGET;
@@ -51,7 +51,7 @@ runners()
     }
     if (has_hit)
     {
-	endmsg();
+	endmsg(rs);
 	has_hit = FALSE;
     }
 }
@@ -61,13 +61,13 @@ runners()
  *	Execute a single turn of running for a monster
  */
 int
-move_monst(THING *tp)
+move_monst(struct rogue_state *rs,THING *tp)
 {
     if (!on(*tp, ISSLOW) || tp->t_turn)
-	if (do_chase(tp) == -1)
+	if (do_chase(rs,tp) == -1)
             return(-1);
     if (on(*tp, ISHASTE))
-	if (do_chase(tp) == -1)
+	if (do_chase(rs,tp) == -1)
             return(-1);
     tp->t_turn ^= TRUE;
     return(0);
@@ -79,20 +79,20 @@ move_monst(THING *tp)
  *	all the relevant state.
  */
 void
-relocate(THING *th, coord *new_loc)
+relocate(struct rogue_state *rs,THING *th, coord *new_loc)
 {
     struct room *oroom;
 
     if (!ce(*new_loc, th->t_pos))
     {
 	mvaddch(th->t_pos.y, th->t_pos.x, th->t_oldch);
-	th->t_room = roomin(new_loc);
+	th->t_room = roomin(rs,new_loc);
 	set_oldch(th, new_loc);
 	oroom = th->t_room;
 	moat(th->t_pos.y, th->t_pos.x) = NULL;
 
 	if (oroom != th->t_room)
-	    th->t_dest = find_dest(th);
+	    th->t_dest = find_dest(rs,th);
 	th->t_pos = *new_loc;
 	moat(new_loc->y, new_loc->x) = th;
     }
@@ -112,7 +112,7 @@ relocate(THING *th, coord *new_loc)
  *	Make one thing chase another.
  */
 int
-do_chase(THING *th)
+do_chase(struct rogue_state *rs,THING *th)
 {
     register coord *cp;
     register struct room *rer, *ree;	/* room of chaser, room of chasee */
@@ -128,7 +128,7 @@ do_chase(THING *th)
     if (th->t_dest == &hero)	/* Find room of chasee */
 	ree = proom;
     else
-	ree = roomin(th->t_dest);
+	ree = roomin(rs,th->t_dest);
     /*
      * We don't count doors as inside rooms for this routine
      */
@@ -173,8 +173,8 @@ over:
 	    delta.y = sign(hero.y - th->t_pos.y);
 	    delta.x = sign(hero.x - th->t_pos.x);
 	    if (has_hit)
-		endmsg();
-	    fire_bolt(&th->t_pos, &delta, "flame");
+		endmsg(rs);
+	    fire_bolt(rs,&th->t_pos, &delta, "flame");
 	    running = FALSE;
 	    count = 0;
 	    quiet = 0;
@@ -195,7 +195,7 @@ over:
     {
 	if (ce(this, hero))
 	{
-	    return( attack(th) );
+	    return( attack(rs,th) );
 	}
 	else if (ce(this, *th->t_dest))
 	{
@@ -206,7 +206,7 @@ over:
 		    attach(th->t_pack, obj);
 		    chat(obj->o_pos.y, obj->o_pos.x) =
 			(th->t_room->r_flags & ISGONE) ? PASSAGE : FLOOR;
-		    th->t_dest = find_dest(th);
+		    th->t_dest = find_dest(rs,th);
 		    break;
 		}
 	    if (th->t_type != 'F')
@@ -218,7 +218,7 @@ over:
 	if (th->t_type == 'F')
 	    return(0);
     }
-    relocate(th, &ch_ret);
+    relocate(rs,th, &ch_ret);
     /*
      * And stop running if need be
      */
@@ -283,7 +283,7 @@ see_monst(THING *mp)
  *	Set a monster running after the hero.
  */
 void
-runto(coord *runner)
+runto(struct rogue_state *rs,coord *runner)
 {
     register THING *tp;
 
@@ -292,7 +292,7 @@ runto(coord *runner)
      */
 #ifdef MASTER
     if ((tp = moat(runner->y, runner->x)) == NULL)
-	msg("couldn't find monster in runto at (%d,%d)", runner->y, runner->x);
+	msg(rs,"couldn't find monster in runto at (%d,%d)", runner->y, runner->x);
 #else
     tp = moat(runner->y, runner->x);
 #endif
@@ -301,7 +301,7 @@ runto(coord *runner)
      */
     tp->t_flags |= ISRUN;
     tp->t_flags &= ~ISHELD;
-    tp->t_dest = find_dest(tp);
+    tp->t_dest = find_dest(rs,tp);
 }
 
 /*
@@ -422,7 +422,7 @@ chase(THING *tp, coord *ee)
  *	in any room.
  */
 struct room *
-roomin(coord *cp)
+roomin(struct rogue_state *rs,coord *cp)
 {
     register struct room *rp;
     register char *fp;
@@ -437,7 +437,7 @@ roomin(coord *cp)
 	 && cp->y <= rp->r_pos.y + rp->r_max.y && rp->r_pos.y <= cp->y)
 	    return rp;
 
-    msg("in some bizarre place (%d, %d)", unc(*cp));
+    msg(rs,"in some bizarre place (%d, %d)", unc(*cp));
 #ifdef MASTER
     abort();
     return NULL;
@@ -465,7 +465,7 @@ diag_ok(coord *sp, coord *ep)
  *	Returns true if the hero can see a certain coordinate.
  */
 bool
-cansee(int y, int x)
+cansee(struct rogue_state *rs,int y, int x)
 {
     register struct room *rer;
     static coord tp;
@@ -486,7 +486,7 @@ cansee(int y, int x)
      */
     tp.y = y;
     tp.x = x;
-    return (bool)((rer = roomin(&tp)) == proom && !(rer->r_flags & ISDARK));
+    return (bool)((rer = roomin(rs,&tp)) == proom && !(rer->r_flags & ISDARK));
 }
 
 /*
@@ -494,7 +494,7 @@ cansee(int y, int x)
  *	find the proper destination for the monster
  */
 coord *
-find_dest(THING *tp)
+find_dest(struct rogue_state *rs,THING *tp)
 {
     register THING *obj;
     register int prob;
@@ -506,7 +506,7 @@ find_dest(THING *tp)
     {
 	if (obj->o_type == SCROLL && obj->o_which == S_SCARE)
 	    continue;
-	if (roomin(&obj->o_pos) == tp->t_room && rnd(100) < prob)
+	if (roomin(rs,&obj->o_pos) == tp->t_room && rnd(100) < prob)
 	{
 	    for (tp = mlist; tp != NULL; tp = next(tp))
 		if (tp->t_dest == &obj->o_pos)

@@ -230,7 +230,7 @@ death(char monst)
     char **dp, *killer;
     struct tm *lt;
     static time_t date;
-    struct tm *localtime();
+    //struct tm *localtime(const time_t *);
 
     signal(SIGINT, SIG_IGN);
     purse -= purse / 10;
@@ -290,7 +290,7 @@ center(char *str)
  */
 
 void
-total_winner()
+total_winner(struct rogue_state *rs)
 {
     THING *obj;
     struct obj_info *op;
@@ -315,7 +315,7 @@ total_winner()
     addstr("a great profit and are admitted to the Fighters' Guild.\n");
     mvaddstr(LINES - 1, 0, "--Press space to continue--");
     refresh();
-    wait_for(' ');
+    wait_for(rs,' ');
     clear();
     mvaddstr(0, 0, "   Worth  Item\n");
     oldpurse = purse;

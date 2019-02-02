@@ -95,13 +95,13 @@ discard(THING *item)
  *	Get a new item with a specified size
  */
 THING *
-new_item()
+new_item(void)
 {
     THING *item;
 
 #ifdef MASTER
     if ((item = calloc(1, sizeof *item)) == NULL)
-	msg("ran out of memory after %d items", total);
+	msg(rs,"ran out of memory after %d items", total);
     else
 	total++;
 #else

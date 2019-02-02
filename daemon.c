@@ -48,7 +48,7 @@ d_slot()
  *	Find a particular slot in the table
  */
 struct delayed_action *
-find_slot(void (*func)())
+find_slot(void (*func)(struct rogue_state *rs,int))
 {
     register struct delayed_action *dev;
 
@@ -63,7 +63,7 @@ find_slot(void (*func)())
  *	Start a daemon, takes a function.
  */
 void
-start_daemon(void (*func)(), int arg, int type)
+start_daemon(void (*func)(struct rogue_state *rs,int), int arg, int type)
 {
     register struct delayed_action *dev;
 
@@ -79,7 +79,7 @@ start_daemon(void (*func)(), int arg, int type)
  *	Remove a daemon from the list
  */
 void
-kill_daemon(void (*func)())
+kill_daemon(void (*func)(struct rogue_state *rs,int))
 {
     register struct delayed_action *dev;
 
@@ -97,7 +97,7 @@ kill_daemon(void (*func)())
  *	passing the argument to the function.
  */
 void
-do_daemons(int flag)
+do_daemons(struct rogue_state *rs,int flag)
 {
     register struct delayed_action *dev;
 
@@ -109,7 +109,7 @@ do_daemons(int flag)
 	 * Executing each one, giving it the proper arguments
 	 */
 	if (dev->d_type == flag && dev->d_time == DAEMON)
-	    (*dev->d_func)(dev->d_arg);
+	    (*dev->d_func)(rs,dev->d_arg);
 }
 
 /*
@@ -117,7 +117,7 @@ do_daemons(int flag)
  *	Start a fuse to go off in a certain number of turns
  */
 void
-fuse(void (*func)(), int arg, int time, int type)
+fuse(void (*func)(struct rogue_state *rs,int), int arg, int time, int type)
 {
     register struct delayed_action *wire;
 
@@ -133,7 +133,7 @@ fuse(void (*func)(), int arg, int time, int type)
  *	Increase the time until a fuse goes off
  */
 void
-lengthen(void (*func)(), int xtime)
+lengthen(void (*func)(struct rogue_state *rs,int), int xtime)
 {
     register struct delayed_action *wire;
 
@@ -147,7 +147,7 @@ lengthen(void (*func)(), int xtime)
  *	Put out a fuse
  */
 void
-extinguish(void (*func)())
+extinguish(void (*func)(struct rogue_state *rs,int))
 {
     register struct delayed_action *wire;
 
@@ -161,7 +161,7 @@ extinguish(void (*func)())
  *	Decrement counters and start needed fuses
  */
 void
-do_fuses(int flag)
+do_fuses(struct rogue_state *rs,int flag)
 {
     register struct delayed_action *wire;
 
@@ -176,6 +176,6 @@ do_fuses(int flag)
 	if (flag == wire->d_type && wire->d_time > 0 && --wire->d_time == 0)
 	{
 	    wire->d_type = EMPTY;
-	    (*wire->d_func)(wire->d_arg);
+	    (*wire->d_func)(rs,wire->d_arg);
 	}
 }

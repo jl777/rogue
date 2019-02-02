@@ -21,7 +21,7 @@
  *	Process the user commands
  */
 void
-command()
+command(struct rogue_state *rs)
 {
     register char ch;
     register int ntimes = 1;			/* Number of player moves */
@@ -34,14 +34,14 @@ command()
     /*
      * Let the daemons start up
      */
-    do_daemons(BEFORE);
-    do_fuses(BEFORE);
+    do_daemons(rs,BEFORE);
+    do_fuses(rs,BEFORE);
     while (ntimes--)
     {
 	again = FALSE;
 	if (has_hit)
 	{
-	    endmsg();
+	    endmsg(rs);
 	    has_hit = FALSE;
 	}
 	/*
@@ -51,10 +51,10 @@ command()
 	if (on(player, ISSLOW|ISGREED|ISINVIS|ISREGEN|ISTARGET))
 	    exit(1);
 
-	look(TRUE);
+	look(rs,TRUE);
 	if (!running)
 	    door_stop = FALSE;
-	status();
+	status(rs);
 	lastscore = purse;
 	move(hero.y, hero.x);
 	if (!((running || count) && jump))
@@ -76,10 +76,10 @@ command()
 		ch = countch;
 	    else
 	    {
-		ch = readchar();
+		ch = readchar(rs);
 		move_on = FALSE;
 		if (mpos != 0)		/* Erase message if its there */
-		    msg("");
+		    msg(rs,"");
 	    }
 	}
 	else
@@ -89,7 +89,7 @@ command()
 	    if (--no_command == 0)
 	    {
 		player.t_flags |= ISRUN;
-		msg("you can move again");
+		msg(rs,"you can move again");
 	    }
 	}
 	else
@@ -107,7 +107,7 @@ command()
 		    count = count * 10 + (ch - '0');
 		    if (count > 255)
 			count = 255;
-		    ch = readchar();
+		    ch = readchar(rs);
 		}
 		countch = ch;
 		/*
@@ -163,29 +163,29 @@ over:
     			}
 
 		    if (found) {
-			if (levit_check())
+			if (levit_check(rs))
 			    ;
 			else
-			    pick_up((char)obj->o_type);
+			    pick_up(rs,(char)obj->o_type);
 		    }
 		    else {
 			if (!terse)
-			    addmsg("there is ");
-			addmsg("nothing here");
+			    addmsg(rs,"there is ");
+			addmsg(rs,"nothing here");
                         if (!terse)
-                            addmsg(" to pick up");
-                        endmsg();
+                            addmsg(rs," to pick up");
+                        endmsg(rs);
 		    }
 		}
-		when '!': shell();
-		when 'h': do_move(0, -1);
-		when 'j': do_move(1, 0);
-		when 'k': do_move(-1, 0);
-		when 'l': do_move(0, 1);
-		when 'y': do_move(-1, -1);
-		when 'u': do_move(-1, 1);
-		when 'b': do_move(1, -1);
-		when 'n': do_move(1, 1);
+		when '!': shell(rs);
+		when 'h': do_move(rs,0, -1);
+		when 'j': do_move(rs,1, 0);
+		when 'k': do_move(rs,-1, 0);
+		when 'l': do_move(rs,0, 1);
+		when 'y': do_move(rs,-1, -1);
+		when 'u': do_move(rs,-1, 1);
+		when 'b': do_move(rs,1, -1);
+		when 'n': do_move(rs,1, 1);
 		when 'H': do_run('h');
 		when 'J': do_run('j');
 		when 'K': do_run('k');
@@ -215,7 +215,7 @@ over:
 		    kamikaze = TRUE;
 		    /* FALLTHROUGH */
 		case 'f':
-		    if (!get_dir())
+		    if (!get_dir(rs))
 		    {
 			after = FALSE;
 			break;
@@ -226,8 +226,8 @@ over:
 			|| ((!see_monst(mp)) && !on(player, SEEMONST)))
 		    {
 			if (!terse)
-			    addmsg("I see ");
-			msg("no monster there");
+			    addmsg(rs,"I see ");
+			msg(rs,"no monster there");
 			after = FALSE;
 		    }
 		    else if (diag_ok(&hero, &delta))
@@ -239,14 +239,14 @@ over:
 			goto over;
 		    }
 		when 't':
-		    if (!get_dir())
+		    if (!get_dir(rs))
 			after = FALSE;
 		    else
-			missile(delta.y, delta.x);
+			missile(rs,delta.y, delta.x);
 		when 'a':
 		    if (last_comm == '\0')
 		    {
-			msg("you haven't typed a command yet");
+			msg(rs,"you haven't typed a command yet");
 			after = FALSE;
 		    }
 		    else
@@ -255,62 +255,62 @@ over:
 			again = TRUE;
 			goto over;
 		    }
-		when 'q': quaff();
+		when 'q': quaff(rs);
 		when 'Q':
 		    after = FALSE;
 		    q_comm = TRUE;
 		    quit(0);
 		    q_comm = FALSE;
-		when 'i': after = FALSE; inventory(pack, 0);
-		when 'I': after = FALSE; picky_inven();
-		when 'd': drop();
-		when 'r': read_scroll();
-		when 'e': eat();
-		when 'w': wield();
-		when 'W': wear();
-		when 'T': take_off();
-		when 'P': ring_on();
-		when 'R': ring_off();
-		when 'o': option(); after = FALSE;
-		when 'c': call(); after = FALSE;
-		when '>': after = FALSE; d_level();
-		when '<': after = FALSE; u_level();
-		when '?': after = FALSE; help();
-		when '/': after = FALSE; identify();
-		when 's': search();
+		when 'i': after = FALSE; inventory(rs,pack, 0);
+		when 'I': after = FALSE; picky_inven(rs);
+		when 'd': drop(rs);
+		when 'r': read_scroll(rs);
+		when 'e': eat(rs);
+		when 'w': wield(rs);
+		when 'W': wear(rs);
+		when 'T': take_off(rs);
+		when 'P': ring_on(rs);
+		when 'R': ring_off(rs);
+		when 'o': option(rs); after = FALSE;
+		when 'c': call(rs); after = FALSE;
+		when '>': after = FALSE; d_level(rs);
+		when '<': after = FALSE; u_level(rs);
+		when '?': after = FALSE; help(rs);
+		when '/': after = FALSE; identify(rs);
+		when 's': search(rs);
 		when 'z':
-		    if (get_dir())
-			do_zap();
+		    if (get_dir(rs))
+			do_zap(rs);
 		    else
 			after = FALSE;
-		when 'D': after = FALSE; discovered();
-		when CTRL('P'): after = FALSE; msg(huh);
+		when 'D': after = FALSE; discovered(rs);
+		when CTRL('P'): after = FALSE; msg(rs,huh);
 		when CTRL('R'):
 		    after = FALSE;
 		    clearok(curscr,TRUE);
 		    wrefresh(curscr);
 		when 'v':
 		    after = FALSE;
-		    msg("version %s. (mctesq was here)", release);
+		    msg(rs,"version %s. (mctesq was here)", release);
 		when 'S': 
 		    after = FALSE;
-		    save_game();
+		    save_game(rs);
 		when '.': ;			/* Rest command */
 		when ' ': after = FALSE;	/* "Legal" illegal command */
 		when '^':
 		    after = FALSE;
-		    if (get_dir()) {
+		    if (get_dir(rs)) {
 			delta.y += hero.y;
 			delta.x += hero.x;
 			fp = &flat(delta.y, delta.x);
                         if (!terse)
-                            addmsg("You have found ");
+                            addmsg(rs,"You have found ");
 			if (chat(delta.y, delta.x) != TRAP)
-			    msg("no trap there");
+			    msg(rs,"no trap there");
 			else if (on(player, ISHALU))
-			    msg(tr_name[rnd(NTRAPS)]);
+			    msg(rs,tr_name[rnd(NTRAPS)]);
 			else {
-			    msg(tr_name[*fp & F_TMASK]);
+			    msg(rs,tr_name[*fp & F_TMASK]);
 			    *fp |= F_SEEN;
 			}
 		    }
@@ -321,7 +321,7 @@ over:
 		    {
 			wizard = FALSE;
 			turn_see(TRUE);
-			msg("not wizard any more");
+			msg(rs,"not wizard any more");
 		    }
 		    else
 		    {
@@ -330,10 +330,10 @@ over:
 			{
 			    noscore = TRUE;
 			    turn_see(FALSE);
-			    msg("you are suddenly as smart as Ken Arnold in dungeon #%d", dnum);
+			    msg(rs,"you are suddenly as smart as Ken Arnold in dungeon #%d", dnum);
 			}
 			else
-			    msg("sorry");
+			    msg(rs,"sorry");
 		    }
 #endif
 		when ESCAPE:	/* Escape */
@@ -343,7 +343,7 @@ over:
 		    again = FALSE;
 		when 'm':
 		    move_on = TRUE;
-		    if (!get_dir())
+		    if (!get_dir(rs))
 			after = FALSE;
 		    else
 		    {
@@ -351,16 +351,16 @@ over:
 			countch = dir_ch;
 			goto over;
 		    }
-		when ')': current(cur_weapon, "wielding", NULL);
-		when ']': current(cur_armor, "wearing", NULL);
+		when ')': current(rs,cur_weapon, "wielding", NULL);
+		when ']': current(rs,cur_armor, "wearing", NULL);
 		when '=':
-		    current(cur_ring[LEFT], "wearing",
+		    current(rs,cur_ring[LEFT], "wearing",
 					    terse ? "(L)" : "on left hand");
-		    current(cur_ring[RIGHT], "wearing",
+		    current(rs,cur_ring[RIGHT], "wearing",
 					    terse ? "(R)" : "on right hand");
 		when '@':
 		    stat_msg = TRUE;
-		    status();
+		    status(rs);
 		    stat_msg = FALSE;
 		    after = FALSE;
 		otherwise:
@@ -368,23 +368,23 @@ over:
 #ifdef MASTER
 		    if (wizard) switch (ch)
 		    {
-			case '|': msg("@ %d,%d", hero.y, hero.x);
+			case '|': msg(rs,"@ %d,%d", hero.y, hero.x);
 			when 'C': create_obj();
-			when '$': msg("inpack = %d", inpack);
-			when CTRL('G'): inventory(lvl_obj, 0);
-			when CTRL('W'): whatis(FALSE, 0);
+			when '$': msg(rs,"inpack = %d", inpack);
+			when CTRL('G'): inventory(rs,lvl_obj, 0);
+			when CTRL('W'): whatis(rs,FALSE, 0);
 			when CTRL('D'): level++; new_level();
 			when CTRL('A'): level--; new_level();
 			when CTRL('F'): show_map();
 			when CTRL('T'): teleport();
-			when CTRL('E'): msg("food left: %d", food_left);
+			when CTRL('E'): msg(rs,"food left: %d", food_left);
 			when CTRL('C'): add_pass();
 			when CTRL('X'): turn_see(on(player, SEEMONST));
 			when CTRL('~'):
 			{
 			    THING *item;
 
-			    if ((item = get_item("charge", STICK)) != NULL)
+			    if ((item = get_item(rs,"charge", STICK)) != NULL)
 				item->o_charges = 10000;
 			}
 			when CTRL('I'):
@@ -393,7 +393,7 @@ over:
 			    THING *obj;
 
 			    for (i = 0; i < 9; i++)
-				raise_level();
+				raise_level(rs);
 			    /*
 			     * Give him a sword (+1,+1)
 			     */
@@ -401,7 +401,7 @@ over:
 			    init_weapon(obj, TWOSWORD);
 			    obj->o_hplus = 1;
 			    obj->o_dplus = 1;
-			    add_pack(obj, TRUE);
+			    add_pack(rs,obj, TRUE);
 			    cur_weapon = obj;
 			    /*
 			     * And his suit of armor
@@ -414,16 +414,16 @@ over:
 			    obj->o_count = 1;
 			    obj->o_group = 0;
 			    cur_armor = obj;
-			    add_pack(obj, TRUE);
+			    add_pack(rs,obj, TRUE);
 			}
 			when '*' :
 			    pr_list();
 			otherwise:
-			    illcom(ch);
+			    illcom(rs,ch);
 		    }
 		    else
 #endif
-			illcom(ch);
+			illcom(rs,ch);
 	    }
 	    /*
 	     * turn off flags if no longer needed
@@ -435,22 +435,22 @@ over:
 	 * If he ran into something to take, let him pick it up.
 	 */
 	if (take != 0)
-	    pick_up(take);
+	    pick_up(rs,take);
 	if (!running)
 	    door_stop = FALSE;
 	if (!after)
 	    ntimes++;
     }
-    do_daemons(AFTER);
-    do_fuses(AFTER);
+    do_daemons(rs,AFTER);
+    do_fuses(rs,AFTER);
     if (ISRING(LEFT, R_SEARCH))
-	search();
+	search(rs);
     else if (ISRING(LEFT, R_TELEPORT) && rnd(50) == 0)
-	teleport();
+	teleport(rs);
     if (ISRING(RIGHT, R_SEARCH))
-	search();
+	search(rs);
     else if (ISRING(RIGHT, R_TELEPORT) && rnd(50) == 0)
-	teleport();
+	teleport(rs);
 }
 
 /*
@@ -458,11 +458,11 @@ over:
  *	What to do with an illegal command
  */
 void
-illcom(int ch)
+illcom(struct rogue_state *rs,int ch)
 {
     save_msg = FALSE;
     count = 0;
-    msg("illegal command '%s'", unctrl(ch));
+    msg(rs,"illegal command '%s'", unctrl(ch));
     save_msg = TRUE;
 }
 
@@ -471,7 +471,7 @@ illcom(int ch)
  *	player gropes about him to find hidden things.
  */
 void
-search()
+search(struct rogue_state *rs)
 {
     register int y, x;
     register char *fp;
@@ -498,7 +498,7 @@ search()
 			if (rnd(5 + probinc) != 0)
 			    break;
 			chat(y, x) = DOOR;
-                        msg("a secret door");
+                        msg(rs,"a secret door");
 foundone:
 			found = TRUE;
 			*fp |= F_REAL;
@@ -510,11 +510,11 @@ foundone:
 			    break;
 			chat(y, x) = TRAP;
 			if (!terse)
-			    addmsg("you found ");
+			    addmsg(rs,"you found ");
 			if (on(player, ISHALU))
-			    msg(tr_name[rnd(NTRAPS)]);
+			    msg(rs,tr_name[rnd(NTRAPS)]);
 			else {
-			    msg(tr_name[*fp & F_TMASK]);
+			    msg(rs,tr_name[*fp & F_TMASK]);
 			    *fp |= F_SEEN;
 			}
 			goto foundone;
@@ -527,7 +527,7 @@ foundone:
 		}
 	}
     if (found)
-	look(FALSE);
+	look(rs,FALSE);
 }
 
 /*
@@ -535,13 +535,13 @@ foundone:
  *	Give single character help, or the whole mess if he wants it
  */
 void
-help()
+help(struct rogue_state *rs)
 {
     register struct h_list *strp;
     register char helpch;
     register int numprint, cnt;
-    msg("character you want help for (* for all): ");
-    helpch = readchar();
+    msg(rs,"character you want help for (* for all): ");
+    helpch = readchar(rs);
     mpos = 0;
     /*
      * If its not a *, print the right help string
@@ -554,11 +554,11 @@ help()
 	    if (strp->h_ch == helpch)
 	    {
 		lower_msg = TRUE;
-		msg("%s%s", unctrl(strp->h_ch), strp->h_desc);
+		msg(rs,"%s%s", unctrl(strp->h_ch), strp->h_desc);
 		lower_msg = FALSE;
 		return;
 	    }
-	msg("unknown character '%s'", unctrl(helpch));
+	msg(rs,"unknown character '%s'", unctrl(helpch));
 	return;
     }
     /*
@@ -590,12 +590,12 @@ help()
     wmove(hw, LINES - 1, 0);
     waddstr(hw, "--Press space to continue--");
     wrefresh(hw);
-    wait_for(' ');
+    wait_for(rs,' ');
     clearok(stdscr, TRUE);
 /*
     refresh();
 */
-    msg("");
+    msg(rs,"");
     touchwin(stdscr);
     wrefresh(stdscr);
 }
@@ -605,7 +605,7 @@ help()
  *	Tell the player what a certain thing is.
  */
 void
-identify()
+identify(struct rogue_state *rs)
 {
     register int ch;
     register struct h_list *hp;
@@ -632,12 +632,12 @@ identify()
 	{'\0'}
     };
 
-    msg("what do you want identified? ");
-    ch = readchar();
+    msg(rs,"what do you want identified? ");
+    ch = readchar(rs);
     mpos = 0;
     if (ch == ESCAPE)
     {
-	msg("");
+	msg(rs,"");
 	return;
     }
     if (isupper(ch))
@@ -652,7 +652,7 @@ identify()
 		break;
 	    }
     }
-    msg("'%s': %s", unctrl(ch), str);
+    msg(rs,"'%s': %s", unctrl(ch), str);
 }
 
 /*
@@ -660,17 +660,17 @@ identify()
  *	He wants to go down a level
  */
 void
-d_level()
+d_level(struct rogue_state *rs)
 {
-    if (levit_check())
+    if (levit_check(rs))
 	return;
     if (chat(hero.y, hero.x) != STAIRS)
-	msg("I see no way down");
+	msg(rs,"I see no way down");
     else
     {
 	level++;
 	seenstairs = FALSE;
-	new_level();
+	new_level(rs);
     }
 }
 
@@ -679,23 +679,23 @@ d_level()
  *	He wants to go up a level
  */
 void
-u_level()
+u_level(struct rogue_state *rs)
 {
-    if (levit_check())
+    if (levit_check(rs))
 	return;
     if (chat(hero.y, hero.x) == STAIRS)
 	if (amulet)
 	{
 	    level--;
 	    if (level == 0)
-		total_winner();
-	    new_level();
-	    msg("you feel a wrenching sensation in your gut");
+		total_winner(rs);
+	    new_level(rs);
+	    msg(rs,"you feel a wrenching sensation in your gut");
 	}
 	else
-	    msg("your way is magically blocked");
+	    msg(rs,"your way is magically blocked");
     else
-	msg("I see no way up");
+	msg(rs,"I see no way up");
 }
 
 /*
@@ -704,11 +704,11 @@ u_level()
  *	appropriate message.
  */
 bool
-levit_check()
+levit_check(struct rogue_state *rs)
 {
     if (!on(player, ISLEVIT))
 	return FALSE;
-    msg("You can't.  You're floating off the ground!");
+    msg(rs,"You can't.  You're floating off the ground!");
     return TRUE;
 }
 
@@ -717,14 +717,14 @@ levit_check()
  *	Allow a user to call a potion, scroll, or ring something
  */
 void
-call()
+call(struct rogue_state *rs)
 {
     register THING *obj;
     register struct obj_info *op = NULL;
     register char **guess, *elsewise = NULL;
     register bool *know;
 
-    obj = get_item("call", CALLABLE);
+    obj = get_item(rs,"call", CALLABLE);
     /*
      * Make certain that it is somethings that we want to wear
      */
@@ -753,7 +753,7 @@ norm:
 	    if (*guess != NULL)
 		elsewise = *guess;
 	when FOOD:
-	    msg("you can't call that anything");
+	    msg(rs,"you can't call that anything");
 	    return;
 	otherwise:
 	    guess = &obj->o_label;
@@ -762,25 +762,25 @@ norm:
     }
     if (know != NULL && *know)
     {
-	msg("that has already been identified");
+	msg(rs,"that has already been identified");
 	return;
     }
     if (elsewise != NULL && elsewise == *guess)
     {
 	if (!terse)
-	    addmsg("Was ");
-	msg("called \"%s\"", elsewise);
+	    addmsg(rs,"Was ");
+	msg(rs,"called \"%s\"", elsewise);
     }
     if (terse)
-	msg("call it: ");
+	msg(rs,"call it: ");
     else
-	msg("what do you want to call it? ");
+	msg(rs,"what do you want to call it? ");
 
     if (elsewise == NULL)
 	strcpy(prbuf, "");
     else
 	strcpy(prbuf, elsewise);
-    if (get_str(prbuf, stdscr) == NORM)
+    if (get_str(rs,prbuf, stdscr) == NORM)
     {
 	if (*guess != NULL)
 	    free(*guess);
@@ -794,27 +794,27 @@ norm:
  *	Print the current weapon/armor
  */
 void
-current(THING *cur, char *how, char *where)
+current(struct rogue_state *rs,THING *cur, char *how, char *where)
 {
     after = FALSE;
     if (cur != NULL)
     {
 	if (!terse)
-	    addmsg("you are %s (", how);
+	    addmsg(rs,"you are %s (", how);
 	inv_describe = FALSE;
-	addmsg("%c) %s", cur->o_packch, inv_name(cur, TRUE));
+	addmsg(rs,"%c) %s", cur->o_packch, inv_name(cur, TRUE));
 	inv_describe = TRUE;
 	if (where)
-	    addmsg(" %s", where);
-	endmsg();
+	    addmsg(rs," %s", where);
+	endmsg(rs);
     }
     else
     {
 	if (!terse)
-	    addmsg("you are ");
-	addmsg("%s nothing", how);
+	    addmsg(rs,"you are ");
+	addmsg(rs,"%s nothing", how);
 	if (where)
-	    addmsg(" %s", where);
-	endmsg();
+	    addmsg(rs," %s", where);
+	endmsg(rs);
     }
 }

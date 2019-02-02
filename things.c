@@ -139,7 +139,7 @@ inv_name(THING *obj, bool drop)
  */
 
 void
-drop()
+drop(struct rogue_state *rs)
 {
     char ch;
     THING *obj;
@@ -148,14 +148,14 @@ drop()
     if (ch != FLOOR && ch != PASSAGE)
     {
 	after = FALSE;
-	msg("there is something there already");
+	msg(rs,"there is something there already");
 	return;
     }
-    if ((obj = get_item("drop", 0)) == NULL)
+    if ((obj = get_item(rs,"drop", 0)) == NULL)
 	return;
-    if (!dropcheck(obj))
+    if (!dropcheck(rs,obj))
 	return;
-    obj = leave_pack(obj, TRUE, (bool)!ISMULT(obj->o_type));
+    obj = leave_pack(rs,obj, TRUE, (bool)!ISMULT(obj->o_type));
     /*
      * Link it into the level object list
      */
@@ -165,7 +165,7 @@ drop()
     obj->o_pos = hero;
     if (obj->o_type == AMULET)
 	amulet = FALSE;
-    msg("dropped %s", inv_name(obj, TRUE));
+    msg(rs,"dropped %s", inv_name(obj, TRUE));
 }
 
 /*
@@ -173,7 +173,7 @@ drop()
  *	Do special checks for dropping or unweilding|unwearing|unringing
  */
 bool
-dropcheck(THING *obj)
+dropcheck(struct rogue_state *rs,THING *obj)
 {
     if (obj == NULL)
 	return TRUE;
@@ -182,14 +182,14 @@ dropcheck(THING *obj)
 	    return TRUE;
     if (obj->o_flags & ISCURSED)
     {
-	msg("you can't.  It appears to be cursed");
+	msg(rs,"you can't.  It appears to be cursed");
 	return FALSE;
     }
     if (obj == cur_weapon)
 	cur_weapon = NULL;
     else if (obj == cur_armor)
     {
-	waste_time();
+	waste_time(rs);
 	cur_armor = NULL;
     }
     else
@@ -201,7 +201,7 @@ dropcheck(THING *obj)
 		chg_str(-obj->o_arm);
 		break;
 	    case R_SEEINVIS:
-		unsee();
+		unsee(rs,0);
 		extinguish(unsee);
 		break;
 	}
@@ -214,7 +214,7 @@ dropcheck(THING *obj)
  *	Return a new thing
  */
 THING *
-new_thing()
+new_thing(struct rogue_state *rs)
 {
     THING *cur;
     int r;
@@ -232,14 +232,14 @@ new_thing()
      * Decide what kind of object it will be
      * If we haven't had food for a while, let it be food.
      */
-    switch (no_food > 3 ? 2 : pick_one(things, NUMTHINGS))
+    switch (no_food > 3 ? 2 : pick_one(rs,things, NUMTHINGS))
     {
 	case 0:
 	    cur->o_type = POTION;
-	    cur->o_which = pick_one(pot_info, MAXPOTIONS);
+	    cur->o_which = pick_one(rs,pot_info, MAXPOTIONS);
 	when 1:
 	    cur->o_type = SCROLL;
-	    cur->o_which = pick_one(scr_info, MAXSCROLLS);
+	    cur->o_which = pick_one(rs,scr_info, MAXSCROLLS);
 	when 2:
 	    cur->o_type = FOOD;
 	    no_food = 0;
@@ -248,7 +248,7 @@ new_thing()
 	    else
 		cur->o_which = 1;
 	when 3:
-	    init_weapon(cur, pick_one(weap_info, MAXWEAPONS));
+	    init_weapon(cur, pick_one(rs,weap_info, MAXWEAPONS));
 	    if ((r = rnd(100)) < 10)
 	    {
 		cur->o_flags |= ISCURSED;
@@ -258,7 +258,7 @@ new_thing()
 		cur->o_hplus += rnd(3) + 1;
 	when 4:
 	    cur->o_type = ARMOR;
-	    cur->o_which = pick_one(arm_info, MAXARMORS);
+	    cur->o_which = pick_one(rs,arm_info, MAXARMORS);
 	    cur->o_arm = a_class[cur->o_which];
 	    if ((r = rnd(100)) < 20)
 	    {
@@ -269,7 +269,7 @@ new_thing()
 		cur->o_arm -= rnd(3) + 1;
 	when 5:
 	    cur->o_type = RING;
-	    cur->o_which = pick_one(ring_info, MAXRINGS);
+	    cur->o_which = pick_one(rs,ring_info, MAXRINGS);
 	    switch (cur->o_which)
 	    {
 		case R_ADDSTR:
@@ -287,12 +287,12 @@ new_thing()
 	    }
 	when 6:
 	    cur->o_type = STICK;
-	    cur->o_which = pick_one(ws_info, MAXSTICKS);
+	    cur->o_which = pick_one(rs,ws_info, MAXSTICKS);
 	    fix_stick(cur);
 #ifdef MASTER
 	otherwise:
 	    debug("Picked a bad kind of object");
-	    wait_for(' ');
+	    wait_for(rs,' ');
 #endif
     }
     return cur;
@@ -303,7 +303,7 @@ new_thing()
  *	Pick an item out of a list of nitems possible objects
  */
 int
-pick_one(struct obj_info *info, int nitems)
+pick_one(struct rogue_state *rs,struct obj_info *info, int nitems)
 {
     struct obj_info *end;
     struct obj_info *start;
@@ -318,9 +318,9 @@ pick_one(struct obj_info *info, int nitems)
 #ifdef MASTER
 	if (wizard)
 	{
-	    msg("bad pick_one: %d from %d items", i, nitems);
+	    msg(rs,"bad pick_one: %d from %d items", i, nitems);
 	    for (info = start; info < end; info++)
-		msg("%s: %d%%", info->oi_name, info->oi_prob);
+		msg(rs,"%s: %d%%", info->oi_name, info->oi_prob);
 	}
 #endif
 	info = start;
@@ -340,7 +340,7 @@ static char *lastfmt, *lastarg;
 
 
 void
-discovered()
+discovered(struct rogue_state *rs)
 {
     char ch;
     bool disc_list;
@@ -348,16 +348,16 @@ discovered()
     do {
 	disc_list = FALSE;
 	if (!terse)
-	    addmsg("for ");
-	addmsg("what type");
+	    addmsg(rs,"for ");
+	addmsg(rs,"what type");
 	if (!terse)
-	    addmsg(" of object do you want a list");
-	msg("? (* for all)");
-	ch = readchar();
+	    addmsg(rs," of object do you want a list");
+	msg(rs,"? (* for all)");
+	ch = readchar(rs);
 	switch (ch)
 	{
 	    case ESCAPE:
-		msg("");
+		msg(rs,"");
 		return;
 	    case POTION:
 	    case SCROLL:
@@ -368,26 +368,26 @@ discovered()
 		break;
 	    default:
 		if (terse)
-		    msg("Not a type");
+		    msg(rs,"Not a type");
 		else
-		    msg("Please type one of %c%c%c%c (ESCAPE to quit)", POTION, SCROLL, RING, STICK);
+		    msg(rs,"Please type one of %c%c%c%c (ESCAPE to quit)", POTION, SCROLL, RING, STICK);
 	}
     } while (!disc_list);
     if (ch == '*')
     {
-	print_disc(POTION);
-	add_line("", NULL);
-	print_disc(SCROLL);
-	add_line("", NULL);
-	print_disc(RING);
-	add_line("", NULL);
-	print_disc(STICK);
-	end_line();
+	print_disc(rs,POTION);
+	add_line(rs,"", NULL);
+	print_disc(rs,SCROLL);
+	add_line(rs,"", NULL);
+	print_disc(rs,RING);
+	add_line(rs,"", NULL);
+	print_disc(rs,STICK);
+	end_line(rs);
     }
     else
     {
-	print_disc(ch);
-	end_line();
+	print_disc(rs,ch);
+	end_line(rs);
     }
 }
 
@@ -400,7 +400,7 @@ discovered()
 
 
 void
-print_disc(char type)
+print_disc(struct rogue_state *rs,char type)
 {
     struct obj_info *info = NULL;
     int i, maxnum = 0, num_found;
@@ -435,11 +435,11 @@ print_disc(char type)
 	{
 	    obj.o_type = type;
 	    obj.o_which = order[i];
-	    add_line("%s", inv_name(&obj, FALSE));
+	    add_line(rs,"%s", inv_name(&obj, FALSE));
 	    num_found++;
 	}
     if (num_found == 0)
-	add_line(nothing(type), NULL);
+	add_line(rs,nothing(type), NULL);
 }
 
 /*
@@ -470,7 +470,7 @@ set_order(int *order, int numthings)
  */
 /* VARARGS1 */
 char
-add_line(char *fmt, char *arg)
+add_line(struct rogue_state *rs,char *fmt, char *arg)
 {
     WINDOW *tw, *sw;
     int x, y;
@@ -486,7 +486,7 @@ add_line(char *fmt, char *arg)
     if (inv_type == INV_SLOW)
     {
 	if (*fmt != '\0')
-	    if (msg(fmt, arg) == ESCAPE)
+	    if (msg(rs,fmt, arg) == ESCAPE)
 		return ESCAPE;
 	line_cnt++;
     }
@@ -498,7 +498,7 @@ add_line(char *fmt, char *arg)
 	{
 	    if (inv_type == INV_OVER && fmt == NULL && !newpage)
 	    {
-		msg("");
+		msg(rs,"");
 		refresh();
 		tw = newwin(line_cnt + 1, maxlen + 2, 0, COLS - maxlen - 3);
 		sw = subwin(tw, line_cnt + 1, maxlen + 1, 0, COLS - maxlen - 2);
@@ -522,7 +522,7 @@ add_line(char *fmt, char *arg)
 		}
 		touchwin(tw);
 		wrefresh(tw);
-		wait_for(' ');
+		wait_for(rs,' ');
                 if (md_hasclreol())
 		{
 		    werase(tw);
@@ -537,7 +537,7 @@ add_line(char *fmt, char *arg)
 		wmove(hw, LINES - 1, 0);
 		waddstr(hw, prompt);
 		wrefresh(hw);
-		wait_for(' ');
+		wait_for(rs,' ');
 		clearok(curscr, TRUE);
 		wclear(hw);
 		touchwin(stdscr);
@@ -565,17 +565,17 @@ add_line(char *fmt, char *arg)
  */
 
 void
-end_line()
+end_line(struct rogue_state *rs)
 {
     if (inv_type != INV_SLOW)
     {
 	if (line_cnt == 1 && !newpage)
 	{
 	    mpos = 0;
-	    msg(lastfmt, lastarg);
+	    msg(rs,lastfmt, lastarg);
 	}
 	else
-	    add_line((char *) NULL, NULL);
+	    add_line(rs,(char *) NULL, NULL);
     }
     line_cnt = 0;
     newpage = FALSE;
@@ -656,17 +656,17 @@ nullstr(THING *ignored)
  */
 
 void
-pr_list()
+pr_list(struct rogue_state *rs)
 {
     int ch;
 
     if (!terse)
-	addmsg("for ");
-    addmsg("what type");
+	addmsg(rs,"for ");
+    addmsg(rs,"what type");
     if (!terse)
-	addmsg(" of object do you want a list");
-    msg("? ");
-    ch = readchar();
+	addmsg(rs," of object do you want a list");
+    msg(rs,"? ");
+    ch = readchar(rs);
     switch (ch)
     {
 	case POTION:
@@ -692,7 +692,7 @@ pr_list()
  */
 
 void
-pr_spec(struct obj_info *info, int nitems)
+pr_spec(struct rogue_state *rs,struct obj_info *info, int nitems)
 {
     struct obj_info *endp;
     int i, lastprob;
@@ -705,9 +705,9 @@ pr_spec(struct obj_info *info, int nitems)
 	    i = 'a';
 	sprintf(prbuf, "%c: %%s (%d%%%%)", i, info->oi_prob - lastprob);
 	lastprob = info->oi_prob;
-	add_line(prbuf, info->oi_name);
+	add_line(rs,prbuf, info->oi_name);
 	info++;
     }
-    end_line();
+    end_line(rs);
 }
 # endif	/* MASTER */

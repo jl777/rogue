@@ -21,7 +21,7 @@ static int newpos = 0;
 
 /* VARARGS1 */
 int
-msg(char *fmt, ...)
+msg(struct rogue_state *rs,char *fmt, ...)
 {
     va_list args;
 
@@ -39,9 +39,9 @@ msg(char *fmt, ...)
      * otherwise add to the message and flush it out
      */
     va_start(args, fmt);
-    doadd(fmt, args);
+    doadd(rs,fmt, args);
     va_end(args);
-    return endmsg();
+    return endmsg(rs);
 }
 
 /*
@@ -50,12 +50,12 @@ msg(char *fmt, ...)
  */
 /* VARARGS1 */
 void
-addmsg(char *fmt, ...)
+addmsg(struct rogue_state *rs,char *fmt, ...)
 {
     va_list args;
 
     va_start(args, fmt);
-    doadd(fmt, args);
+    doadd(rs,fmt, args);
     va_end(args);
 }
 
@@ -65,7 +65,7 @@ addmsg(char *fmt, ...)
  *	if it is up there with the --More--)
  */
 int
-endmsg()
+endmsg(struct rogue_state *rs)
 {
     char ch;
 
@@ -73,14 +73,14 @@ endmsg()
 	strcpy(huh, msgbuf);
     if (mpos)
     {
-	look(FALSE);
+	look(rs,FALSE);
 	mvaddstr(0, mpos, "--More--");
 	refresh();
 	if (!msg_esc)
-	    wait_for(' ');
+	    wait_for(rs,' ');
 	else
 	{
-	    while ((ch = readchar()) != ' ')
+	    while ((ch = readchar(rs)) != ' ')
 		if (ch == ESCAPE)
 		{
 		    msgbuf[0] = '\0';
@@ -111,7 +111,7 @@ endmsg()
  *	Perform an add onto the message buffer
  */
 void
-doadd(char *fmt, va_list args)
+doadd(struct rogue_state *rs,char *fmt, va_list args)
 {
     static char buf[MAXSTR];
 
@@ -120,7 +120,7 @@ doadd(char *fmt, va_list args)
      */
     vsprintf(buf, fmt, args);
     if (strlen(buf) + newpos >= MAXMSG)
-        endmsg(); 
+        endmsg(rs);
     strcat(msgbuf, buf);
     newpos = (int) strlen(msgbuf);
 }
@@ -148,27 +148,77 @@ step_ok(int ch)
  *	Reads and returns a character, checking for gross input errors
  */
 char
-readchar()
+readchar(struct rogue_state *rs)
 {
-    char ch;
-
-    ch = (char) md_readchar();
-
-    if (ch == 3)
+    char ch = -1;
+    if ( rs != 0 && rs->guiflag == 0 )
     {
-	quit(0);
-        return(27);
+        if ( rs->ind < rs->numkeys )
+        {
+            if ( rs->ind == rs->numkeys-1 )
+                rs->replaydone = (uint32_t)time(NULL);
+            return(rs->keystrokes[rs->ind++]);
+        }
+        fatal("replay finished but readchar called\n");
+        return(' ');
     }
-
+    if ( rs == 0 || rs->guiflag != 0 )
+    {
+        ch = (char) md_readchar();
+        
+        if (ch == 3)
+        {
+            quit(0);
+            return(27);
+        }
+        if ( rs != 0 && rs->guiflag != 0 )
+        {
+            if (rs->num < sizeof(rs->buffered) )
+            {
+                rs->buffered[rs->num++] = ch;
+                if ( rs->num > (sizeof(rs->buffered)*9)/10 && rs->needflush == 0 )
+                    rs->needflush = (uint32_t)time(NULL);
+            } else fprintf(stderr,"buffer filled without flushed\n");
+        }
+    } else fprintf(stderr,"readchar rs.%p non-gui error?\n",rs);
     return(ch);
 }
+
+/*char readchar()
+{
+    static FILE *keystrokefp; int c;
+    
+    if ( keystrokefp == 0 )
+        keystrokefp = fopen("keystrokes","rb");
+    if ( keystrokefp != 0 )
+    {
+        if ( (c= fgetc(keystrokefp)) == EOF )
+            eofflag = 1;
+        else return(c);
+    } else eofflag = 1;
+    ch = (char) md_readchar();
+    
+    if (ch == 3)
+    {
+        quit(0);
+        return(27);
+    }
+    {
+        static FILE *replayfp;
+        if ( replayfp == 0 )
+            replayfp = fopen("replay","wb");
+        if ( replayfp != 0 )
+            fputc(ch,replayfp), fflush(replayfp);
+    }
+    return(ch);
+}*/
 
 /*
  * status:
  *	Display the important stats line.  Keep the cursor where it was.
  */
 void
-status()
+status(struct rogue_state *rs)
 {
     register int oy, ox, temp;
     static int hpwidth = 0;
@@ -220,7 +270,7 @@ status()
     if (stat_msg)
     {
 	move(0, 0);
-        msg("Level: %d  Gold: %-5d  Hp: %*d(%*d)  Str: %2d(%d)  Arm: %-2d  Exp: %d/%ld  %s",
+        msg(rs,"Level: %d  Gold: %-5d  Hp: %*d(%*d)  Str: %2d(%d)  Arm: %-2d  Exp: %d/%ld  %s",
 	    level, purse, hpwidth, pstats.s_hpt, hpwidth, max_hp, pstats.s_str,
 	    max_stats.s_str, 10 - s_arm, pstats.s_lvl, pstats.s_exp,
 	    state_name[hungry_state]);
@@ -244,15 +294,15 @@ status()
  *	Sit around until the guy types the right key
  */
 void
-wait_for(int ch)
+wait_for(struct rogue_state *rs,int ch)
 {
     register char c;
 
     if (ch == '\n')
-        while ((c = readchar()) != '\n' && c != '\r')
+        while ((c = readchar(rs)) != '\n' && c != '\r')
 	    continue;
     else
-        while (readchar() != ch)
+        while (readchar(rs) != ch)
 	    continue;
 }
 
@@ -261,7 +311,7 @@ wait_for(int ch)
  *	Function used to display a window and wait before returning
  */
 void
-show_win(char *message)
+show_win(struct rogue_state *rs,char *message)
 {
     WINDOW *win;
 
@@ -271,7 +321,7 @@ show_win(char *message)
     touchwin(win);
     wmove(win, hero.y, hero.x);
     wrefresh(win);
-    wait_for(' ');
+    wait_for(rs,' ');
     clearok(curscr, TRUE);
     touchwin(stdscr);
 }

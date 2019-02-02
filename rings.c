@@ -19,12 +19,12 @@
  */
 
 void
-ring_on()
+ring_on(struct rogue_state *rs)
 {
     THING *obj;
     int ring;
 
-    obj = get_item("put on", RING);
+    obj = get_item(rs,"put on", RING);
     /*
      * Make certain that it is somethings that we want to wear
      */
@@ -33,21 +33,21 @@ ring_on()
     if (obj->o_type != RING)
     {
 	if (!terse)
-	    msg("it would be difficult to wrap that around a finger");
+	    msg(rs,"it would be difficult to wrap that around a finger");
 	else
-	    msg("not a ring");
+	    msg(rs,"not a ring");
 	return;
     }
 
     /*
      * find out which hand to put it on
      */
-    if (is_current(obj))
+    if (is_current(rs,obj))
 	return;
 
     if (cur_ring[LEFT] == NULL && cur_ring[RIGHT] == NULL)
     {
-	if ((ring = gethand()) < 0)
+	if ((ring = gethand(rs)) < 0)
 	    return;
     }
     else if (cur_ring[LEFT] == NULL)
@@ -57,9 +57,9 @@ ring_on()
     else
     {
 	if (!terse)
-	    msg("you already have a ring on each hand");
+	    msg(rs,"you already have a ring on each hand");
 	else
-	    msg("wearing two");
+	    msg(rs,"wearing two");
 	return;
     }
     cur_ring[ring] = obj;
@@ -76,13 +76,13 @@ ring_on()
 	    invis_on();
 	    break;
 	case R_AGGR:
-	    aggravate();
+	    aggravate(rs);
 	    break;
     }
 
     if (!terse)
-	addmsg("you are now wearing ");
-    msg("%s (%c)", inv_name(obj, TRUE), obj->o_packch);
+	addmsg(rs,"you are now wearing ");
+    msg(rs,"%s (%c)", inv_name(obj, TRUE), obj->o_packch);
 }
 
 /*
@@ -91,7 +91,7 @@ ring_on()
  */
 
 void
-ring_off()
+ring_off(struct rogue_state *rs)
 {
     int ring;
     THING *obj;
@@ -99,9 +99,9 @@ ring_off()
     if (cur_ring[LEFT] == NULL && cur_ring[RIGHT] == NULL)
     {
 	if (terse)
-	    msg("no rings");
+	    msg(rs,"no rings");
 	else
-	    msg("you aren't wearing any rings");
+	    msg(rs,"you aren't wearing any rings");
 	return;
     }
     else if (cur_ring[LEFT] == NULL)
@@ -109,17 +109,17 @@ ring_off()
     else if (cur_ring[RIGHT] == NULL)
 	ring = LEFT;
     else
-	if ((ring = gethand()) < 0)
+	if ((ring = gethand(rs)) < 0)
 	    return;
     mpos = 0;
     obj = cur_ring[ring];
     if (obj == NULL)
     {
-	msg("not wearing such a ring");
+	msg(rs,"not wearing such a ring");
 	return;
     }
-    if (dropcheck(obj))
-	msg("was wearing %s(%c)", inv_name(obj, TRUE), obj->o_packch);
+    if (dropcheck(rs,obj))
+	msg(rs,"was wearing %s(%c)", inv_name(obj, TRUE), obj->o_packch);
 }
 
 /*
@@ -127,17 +127,17 @@ ring_off()
  *	Which hand is the hero interested in?
  */
 int
-gethand()
+gethand(struct rogue_state *rs)
 {
     int c;
 
     for (;;)
     {
 	if (terse)
-	    msg("left or right ring? ");
+	    msg(rs,"left or right ring? ");
 	else
-	    msg("left hand or right hand? ");
-	if ((c = readchar()) == ESCAPE)
+	    msg(rs,"left hand or right hand? ");
+	if ((c = readchar(rs)) == ESCAPE)
 	    return -1;
 	mpos = 0;
 	if (c == 'l' || c == 'L')
@@ -145,9 +145,9 @@ gethand()
 	else if (c == 'r' || c == 'R')
 	    return RIGHT;
 	if (terse)
-	    msg("L or R");
+	    msg(rs,"L or R");
 	else
-	    msg("please type L or R");
+	    msg(rs,"please type L or R");
     }
 }
 

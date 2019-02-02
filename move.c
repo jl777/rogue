@@ -40,7 +40,7 @@ do_run(char ch)
  */
 
 void
-do_move(int dy, int dx)
+do_move(struct rogue_state *rs,int dy, int dx)
 {
     char ch, fl;
 
@@ -48,7 +48,7 @@ do_move(int dy, int dx)
     if (no_move)
     {
 	no_move--;
-	msg("you are still stuck in the bear trap");
+	msg(rs,"you are still stuck in the bear trap");
 	return;
     }
     /*
@@ -98,7 +98,7 @@ over:
     }
     else if (on(player, ISHELD) && ch != 'F')
     {
-	msg("you are being held");
+	msg(rs,"you are being held");
 	return;
     }
     switch (ch)
@@ -160,10 +160,10 @@ hit_bound:
 	case DOOR:
 	    running = FALSE;
 	    if (flat(hero.y, hero.x) & F_PASS)
-		enter_room(&nh);
+		enter_room(rs,&nh);
 	    goto move_stuff;
 	case TRAP:
-	    ch = be_trapped(&nh);
+	    ch = be_trapped(rs,&nh);
 	    if (ch == T_DOOR || ch == T_TELEP)
 		return;
 	    goto move_stuff;
@@ -174,11 +174,11 @@ hit_bound:
 	     * if you're leaving a maze room, so it is necessary to
 	     * always recalculate proom.
 	     */
-	    proom = roomin(&hero);
+	    proom = roomin(rs,&hero);
 	    goto move_stuff;
 	case FLOOR:
 	    if (!(fl & F_REAL))
-		be_trapped(&hero);
+		be_trapped(rs,&hero);
 	    goto move_stuff;
 	case STAIRS:
 	    seenstairs = TRUE;
@@ -186,7 +186,7 @@ hit_bound:
 	default:
 	    running = FALSE;
 	    if (isupper(ch) || moat(nh.y, nh.x))
-		fight(&nh, cur_weapon, FALSE);
+		fight(rs,&nh, cur_weapon, FALSE);
 	    else
 	    {
 		if (ch != STAIRS)
@@ -194,7 +194,7 @@ hit_bound:
 move_stuff:
 		mvaddch(hero.y, hero.x, floor_at());
 		if ((fl & F_PASS) && chat(oldpos.y, oldpos.x) == DOOR)
-		    leave_room(&nh);
+		    leave_room(rs,&nh);
 		hero = nh;
 	    }
     }
@@ -244,7 +244,7 @@ turnref()
  */
 
 void
-door_open(struct room *rp)
+door_open(struct rogue_state *rs,struct room *rp)
 {
     int y, x;
 
@@ -252,7 +252,7 @@ door_open(struct room *rp)
 	for (y = rp->r_pos.y; y < rp->r_pos.y + rp->r_max.y; y++)
 	    for (x = rp->r_pos.x; x < rp->r_pos.x + rp->r_max.x; x++)
 		if (isupper(winat(y, x)))
-		    wake_monster(y, x);
+		    wake_monster(rs,y, x);
 }
 
 /*
@@ -260,7 +260,7 @@ door_open(struct room *rp)
  *	The guy stepped on a trap.... Make him pay.
  */
 char
-be_trapped(coord *tc)
+be_trapped(struct rogue_state *rs,coord *tc)
 {
     PLACE *pp;
     THING *arrow;
@@ -278,41 +278,41 @@ be_trapped(coord *tc)
     {
 	case T_DOOR:
 	    level++;
-	    new_level();
-	    msg("you fell into a trap!");
+	    new_level(rs);
+	    msg(rs,"you fell into a trap!");
 	when T_BEAR:
 	    no_move += BEARTIME;
-	    msg("you are caught in a bear trap");
+	    msg(rs,"you are caught in a bear trap");
         when T_MYST:
             switch(rnd(11))
             {
-                case 0: msg("you are suddenly in a parallel dimension");
-                when 1: msg("the light in here suddenly seems %s", rainbow[rnd(cNCOLORS)]);
-                when 2: msg("you feel a sting in the side of your neck");
-                when 3: msg("multi-colored lines swirl around you, then fade");
-                when 4: msg("a %s light flashes in your eyes", rainbow[rnd(cNCOLORS)]);
-                when 5: msg("a spike shoots past your ear!");
-                when 6: msg("%s sparks dance across your armor", rainbow[rnd(cNCOLORS)]);
-                when 7: msg("you suddenly feel very thirsty");
-                when 8: msg("you feel time speed up suddenly");
-                when 9: msg("time now seems to be going slower");
-                when 10: msg("you pack turns %s!", rainbow[rnd(cNCOLORS)]);
+                case 0: msg(rs,"you are suddenly in a parallel dimension");
+                when 1: msg(rs,"the light in here suddenly seems %s", rainbow[rnd(cNCOLORS)]);
+                when 2: msg(rs,"you feel a sting in the side of your neck");
+                when 3: msg(rs,"multi-colored lines swirl around you, then fade");
+                when 4: msg(rs,"a %s light flashes in your eyes", rainbow[rnd(cNCOLORS)]);
+                when 5: msg(rs,"a spike shoots past your ear!");
+                when 6: msg(rs,"%s sparks dance across your armor", rainbow[rnd(cNCOLORS)]);
+                when 7: msg(rs,"you suddenly feel very thirsty");
+                when 8: msg(rs,"you feel time speed up suddenly");
+                when 9: msg(rs,"time now seems to be going slower");
+                when 10: msg(rs,"you pack turns %s!", rainbow[rnd(cNCOLORS)]);
             }
 	when T_SLEEP:
 	    no_command += SLEEPTIME;
 	    player.t_flags &= ~ISRUN;
-	    msg("a strange white mist envelops you and you fall asleep");
+	    msg(rs,"a strange white mist envelops you and you fall asleep");
 	when T_ARROW:
 	    if (swing(pstats.s_lvl - 1, pstats.s_arm, 1))
 	    {
 		pstats.s_hpt -= roll(1, 6);
 		if (pstats.s_hpt <= 0)
 		{
-		    msg("an arrow killed you");
+		    msg(rs,"an arrow killed you");
 		    death('a');
 		}
 		else
-		    msg("oh no! An arrow shot you");
+		    msg(rs,"oh no! An arrow shot you");
 	    }
 	    else
 	    {
@@ -320,34 +320,34 @@ be_trapped(coord *tc)
 		init_weapon(arrow, ARROW);
 		arrow->o_count = 1;
 		arrow->o_pos = hero;
-		fall(arrow, FALSE);
-		msg("an arrow shoots past you");
+		fall(rs,arrow, FALSE);
+		msg(rs,"an arrow shoots past you");
 	    }
 	when T_TELEP:
 	    /*
 	     * since the hero's leaving, look() won't put a TRAP
 	     * down for us, so we have to do it ourself
 	     */
-	    teleport();
+	    teleport(rs);
 	    mvaddch(tc->y, tc->x, TRAP);
 	when T_DART:
 	    if (!swing(pstats.s_lvl+1, pstats.s_arm, 1))
-		msg("a small dart whizzes by your ear and vanishes");
+		msg(rs,"a small dart whizzes by your ear and vanishes");
 	    else
 	    {
 		pstats.s_hpt -= roll(1, 4);
 		if (pstats.s_hpt <= 0)
 		{
-		    msg("a poisoned dart killed you");
+		    msg(rs,"a poisoned dart killed you");
 		    death('d');
 		}
 		if (!ISWEARING(R_SUSTSTR) && !save(VS_POISON))
 		    chg_str(-1);
-		msg("a small dart just hit you in the shoulder");
+		msg(rs,"a small dart just hit you in the shoulder");
 	    }
 	when T_RUST:
-	    msg("a gush of water hits you on the head");
-	    rust_armor(cur_armor);
+	    msg(rs,"a gush of water hits you on the head");
+	    rust_armor(rs,cur_armor);
     }
     flush_type();
     return tr;
@@ -403,7 +403,7 @@ bad:
  */
 
 void
-rust_armor(THING *arm)
+rust_armor(struct rogue_state *rs,THING *arm)
 {
     if (arm == NULL || arm->o_type != ARMOR || arm->o_which == LEATHER ||
 	arm->o_arm >= 9)
@@ -412,14 +412,14 @@ rust_armor(THING *arm)
     if ((arm->o_flags & ISPROT) || ISWEARING(R_SUSTARM))
     {
 	if (!to_death)
-	    msg("the rust vanishes instantly");
+	    msg(rs,"the rust vanishes instantly");
     }
     else
     {
 	arm->o_arm++;
 	if (!terse)
-	    msg("your armor appears to be weaker now. Oh my!");
+	    msg(rs,"your armor appears to be weaker now. Oh my!");
 	else
-	    msg("your armor weakens");
+	    msg(rs,"your armor weakens");
     }
 }

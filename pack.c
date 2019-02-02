@@ -23,7 +23,7 @@
  */
 
 void
-add_pack(THING *obj, bool silent)
+add_pack(struct rogue_state *rs,THING *obj, bool silent)
 {
     THING *op, *lp;
     bool from_floor;
@@ -31,7 +31,7 @@ add_pack(THING *obj, bool silent)
     from_floor = FALSE;
     if (obj == NULL)
     {
-	if ((obj = find_obj(hero.y, hero.x)) == NULL)
+	if ((obj = find_obj(rs,hero.y, hero.x)) == NULL)
 	    return;
 	from_floor = TRUE;
     }
@@ -46,7 +46,7 @@ add_pack(THING *obj, bool silent)
 	    mvaddch(hero.y, hero.x, floor_ch());
 	    chat(hero.y, hero.x) = (proom->r_flags & ISGONE) ? PASSAGE : FLOOR;
 	    discard(obj);
-	    msg("the scroll turns to dust as you pick it up");
+	    msg(rs,"the scroll turns to dust as you pick it up");
 	    return;
 	}
 
@@ -77,7 +77,7 @@ add_pack(THING *obj, bool silent)
 		{
 		    if (ISMULT(op->o_type))
 		    {
-			if (!pack_room(from_floor, obj))
+			if (!pack_room(rs,from_floor, obj))
 			    return;
 			op->o_count++;
 dump_it:
@@ -105,7 +105,7 @@ dump_it:
 			{
 				op->o_count += obj->o_count;
 				inpack--;
-				if (!pack_room(from_floor, obj))
+				if (!pack_room(rs,from_floor, obj))
 				    return;
 				goto dump_it;
 			}
@@ -120,7 +120,7 @@ out:
 
 	if (lp != NULL)
 	{
-	    if (!pack_room(from_floor, obj))
+	    if (!pack_room(rs,from_floor, obj))
 		return;
 	    else
 	    {
@@ -152,8 +152,8 @@ out:
     if (!silent)
     {
 	if (!terse)
-	    addmsg("you now have ");
-	msg("%s (%c)", inv_name(obj, !terse), obj->o_packch);
+	    addmsg(rs,"you now have ");
+	msg(rs,"%s (%c)", inv_name(obj, !terse), obj->o_packch);
     }
 }
 
@@ -163,18 +163,18 @@ out:
  *	appropriate message
  */
 bool
-pack_room(bool from_floor, THING *obj)
+pack_room(struct rogue_state *rs,bool from_floor, THING *obj)
 {
     if (++inpack > MAXPACK)
     {
 	if (!terse)
-	    addmsg("there's ");
-	addmsg("no room");
+	    addmsg(rs,"there's ");
+	addmsg(rs,"no room");
 	if (!terse)
-	    addmsg(" in your pack");
-	endmsg();
+	    addmsg(rs," in your pack");
+	endmsg(rs);
 	if (from_floor)
-	    move_msg(obj);
+	    move_msg(rs,obj);
 	inpack = MAXPACK;
 	return FALSE;
     }
@@ -194,7 +194,7 @@ pack_room(bool from_floor, THING *obj)
  *	take an item out of the pack
  */
 THING *
-leave_pack(THING *obj, bool newobj, bool all)
+leave_pack(struct rogue_state *rs,THING *obj, bool newobj, bool all)
 {
     THING *nobj;
 
@@ -245,7 +245,7 @@ pack_char()
  *	the given type.
  */
 bool
-inventory(THING *list, int type)
+inventory(struct rogue_state *rs,THING *list, int type)
 {
     static char inv_temp[MAXSTR];
 
@@ -264,10 +264,10 @@ inventory(THING *list, int type)
 #endif
 	    sprintf(inv_temp, "%c) %%s", list->o_packch);
 	msg_esc = TRUE;
-	if (add_line(inv_temp, inv_name(list, FALSE)) == ESCAPE)
+	if (add_line(rs,inv_temp, inv_name(list, FALSE)) == ESCAPE)
 	{
 	    msg_esc = FALSE;
-	    msg("");
+	    msg(rs,"");
 	    return TRUE;
 	}
 	msg_esc = FALSE;
@@ -275,14 +275,14 @@ inventory(THING *list, int type)
     if (n_objs == 0)
     {
 	if (terse)
-	    msg(type == 0 ? "empty handed" :
+	    msg(rs,type == 0 ? "empty handed" :
 			    "nothing appropriate");
 	else
-	    msg(type == 0 ? "you are empty handed" :
+	    msg(rs,type == 0 ? "you are empty handed" :
 			    "you don't have anything appropriate");
 	return FALSE;
     }
-    end_line();
+    end_line(rs);
     return TRUE;
 }
 
@@ -292,23 +292,23 @@ inventory(THING *list, int type)
  */
 
 void
-pick_up(char ch)
+pick_up(struct rogue_state *rs,char ch)
 {
     THING *obj;
 
     if (on(player, ISLEVIT))
 	return;
 
-    obj = find_obj(hero.y, hero.x);
+    obj = find_obj(rs,hero.y, hero.x);
     if (move_on)
-	move_msg(obj);
+	move_msg(rs,obj);
     else
 	switch (ch)
 	{
 	    case GOLD:
 		if (obj == NULL)
 		    return;
-		money(obj->o_goldval);
+		money(rs,obj->o_goldval);
 		detach(lvl_obj, obj);
 		discard(obj);
 		proom->r_goldval = 0;
@@ -325,7 +325,7 @@ pick_up(char ch)
 	    case AMULET:
 	    case RING:
 	    case STICK:
-		add_pack((THING *) NULL, FALSE);
+		add_pack(rs,(THING *) NULL, FALSE);
 		break;
 	}
 }
@@ -336,11 +336,11 @@ pick_up(char ch)
  */
 
 void
-move_msg(THING *obj)
+move_msg(struct rogue_state *rs,THING *obj)
 {
     if (!terse)
-	addmsg("you ");
-    msg("moved onto %s", inv_name(obj, TRUE));
+	addmsg(rs,"you ");
+    msg(rs,"moved onto %s", inv_name(obj, TRUE));
 }
 
 /*
@@ -349,31 +349,31 @@ move_msg(THING *obj)
  */
 
 void
-picky_inven()
+picky_inven(struct rogue_state *rs)
 {
     THING *obj;
     char mch;
 
     if (pack == NULL)
-	msg("you aren't carrying anything");
+	msg(rs,"you aren't carrying anything");
     else if (next(pack) == NULL)
-	msg("a) %s", inv_name(pack, FALSE));
+	msg(rs,"a) %s", inv_name(pack, FALSE));
     else
     {
-	msg(terse ? "item: " : "which item do you wish to inventory: ");
+	msg(rs,terse ? "item: " : "which item do you wish to inventory: ");
 	mpos = 0;
-	if ((mch = readchar()) == ESCAPE)
+	if ((mch = readchar(rs)) == ESCAPE)
 	{
-	    msg("");
+	    msg(rs,"");
 	    return;
 	}
 	for (obj = pack; obj != NULL; obj = next(obj))
 	    if (mch == obj->o_packch)
 	    {
-		msg("%c) %s", mch, inv_name(obj, FALSE));
+		msg(rs,"%c) %s", mch, inv_name(obj, FALSE));
 		return;
 	    }
-	msg("'%s' not in pack", unctrl(mch));
+	msg(rs,"'%s' not in pack", unctrl(mch));
     }
 }
 
@@ -382,29 +382,29 @@ picky_inven()
  *	Pick something out of a pack for a purpose
  */
 THING *
-get_item(char *purpose, int type)
+get_item(struct rogue_state *rs,char *purpose, int type)
 {
     THING *obj;
     char ch;
 
     if (pack == NULL)
-	msg("you aren't carrying anything");
+	msg(rs,"you aren't carrying anything");
     else if (again)
 	if (last_pick)
 	    return last_pick;
 	else
-	    msg("you ran out");
+	    msg(rs,"you ran out");
     else
     {
 	for (;;)
 	{
 	    if (!terse)
-		addmsg("which object do you want to ");
-	    addmsg(purpose);
+		addmsg(rs,"which object do you want to ");
+	    addmsg(rs,purpose);
 	    if (terse)
-		addmsg(" what");
-	    msg("? (* for list): ");
-	    ch = readchar();
+		addmsg(rs," what");
+	    msg(rs,"? (* for list): ");
+	    ch = readchar(rs);
 	    mpos = 0;
 	    /*
 	     * Give the poor player a chance to abort the command
@@ -413,14 +413,14 @@ get_item(char *purpose, int type)
 	    {
 		reset_last();
 		after = FALSE;
-		msg("");
+		msg(rs,"");
 		return NULL;
 	    }
 	    n_objs = 1;		/* normal case: person types one char */
 	    if (ch == '*')
 	    {
 		mpos = 0;
-		if (inventory(pack, type) == 0)
+		if (inventory(rs,pack, type) == 0)
 		{
 		    after = FALSE;
 		    return NULL;
@@ -432,7 +432,7 @@ get_item(char *purpose, int type)
 		    break;
 	    if (obj == NULL)
 	    {
-		msg("'%s' is not a valid item",unctrl(ch));
+		msg(rs,"'%s' is not a valid item",unctrl(ch));
 		continue;
 	    }
 	    else 
@@ -448,7 +448,7 @@ get_item(char *purpose, int type)
  */
 
 void
-money(int value)
+money(struct rogue_state *rs,int value)
 {
     purse += value;
     mvaddch(hero.y, hero.x, floor_ch());
@@ -456,8 +456,8 @@ money(int value)
     if (value > 0)
     {
 	if (!terse)
-	    addmsg("you found ");
-	msg("%d gold pieces", value);
+	    addmsg(rs,"you found ");
+	msg(rs,"%d gold pieces", value);
     }
 }
 

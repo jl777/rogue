@@ -45,7 +45,7 @@ fix_stick(THING *cur)
  */
 
 void
-do_zap()
+do_zap(struct rogue_state *rs)
 {
     THING *obj, *tp;
     int y, x;
@@ -53,17 +53,17 @@ do_zap()
     char monster, oldch;
     static THING bolt;
 
-    if ((obj = get_item("zap with", STICK)) == NULL)
+    if ((obj = get_item(rs,"zap with", STICK)) == NULL)
 	return;
     if (obj->o_type != STICK)
     {
 	after = FALSE;
-	msg("you can't zap with that!");
+	msg(rs,"you can't zap with that!");
 	return;
     }
     if (obj->o_charges == 0)
     {
-	msg("nothing happens");
+	msg(rs,"nothing happens");
 	return;
     }
     switch (obj->o_which)
@@ -74,18 +74,18 @@ do_zap()
 	     */
 	    ws_info[WS_LIGHT].oi_know = TRUE;
 	    if (proom->r_flags & ISGONE)
-		msg("the corridor glows and then fades");
+		msg(rs,"the corridor glows and then fades");
 	    else
 	    {
 		proom->r_flags &= ~ISDARK;
 		/*
 		 * Light the room and put the player back up
 		 */
-		enter_room(&hero);
-		addmsg("the room is lit");
+		enter_room(rs,&hero);
+		addmsg(rs,"the room is lit");
 		if (!terse)
-		    addmsg(" by a shimmering %s light", pick_color("blue"));
-		endmsg();
+		    addmsg(rs," by a shimmering %s light", pick_color("blue"));
+		endmsg(rs);
 	    }
 	when WS_DRAIN:
 	    /*
@@ -95,11 +95,11 @@ do_zap()
 	     */
 	    if (pstats.s_hpt < 2)
 	    {
-		msg("you are too weak to use it");
+		msg(rs,"you are too weak to use it");
 		return;
 	    }
 	    else
-		drain();
+		drain(rs);
 	when WS_INVIS:
 	case WS_POLYMORPH:
 	case WS_TELAWAY:
@@ -120,7 +120,7 @@ do_zap()
 		switch (obj->o_which) {
 		    case WS_INVIS:
 			tp->t_flags |= ISINVIS;
-			if (cansee(y, x))
+			if (cansee(rs,y, x))
 			    mvaddch(y, x, tp->t_oldch);
 			break;
 		    case WS_POLYMORPH:
@@ -134,7 +134,7 @@ do_zap()
 			oldch = tp->t_oldch;
 			delta.y = y;
 			delta.x = x;
-			new_monster(tp, monster = (char)(rnd(26) + 'A'), &delta);
+			new_monster(rs,tp, monster = (char)(rnd(26) + 'A'), &delta);
 			if (see_monst(tp))
 			    mvaddch(y, x, monster);
 			tp->t_oldch = oldch;
@@ -168,7 +168,7 @@ do_zap()
 			}
 			tp->t_dest = &hero;
 			tp->t_flags |= ISRUN;
-			relocate(tp, &new_pos);
+			relocate(rs,tp, &new_pos);
 		    }
 		}
 	    }
@@ -181,14 +181,14 @@ do_zap()
 	    bolt.o_flags = ISMISL;
 	    if (cur_weapon != NULL)
 		bolt.o_launch = cur_weapon->o_which;
-	    do_motion(&bolt, delta.y, delta.x);
+	    do_motion(rs,&bolt, delta.y, delta.x);
 	    if ((tp = moat(bolt.o_pos.y, bolt.o_pos.x)) != NULL
 		&& !save_throw(VS_MAGIC, tp))
-		    hit_monster(unc(bolt.o_pos), &bolt);
+		    hit_monster(rs,unc(bolt.o_pos), &bolt);
 	    else if (terse)
-		msg("missle vanishes");
+		msg(rs,"missle vanishes");
 	    else
-		msg("the missle vanishes with a puff of smoke");
+		msg(rs,"the missle vanishes with a puff of smoke");
 	when WS_HASTE_M:
 	case WS_SLOW_M:
 	    y = hero.y;
@@ -217,7 +217,7 @@ do_zap()
 		}
 		delta.y = y;
 		delta.x = x;
-		runto(&delta);
+		runto(rs,&delta);
 	    }
 	when WS_ELECT:
 	case WS_FIRE:
@@ -228,13 +228,13 @@ do_zap()
 		name = "flame";
 	    else
 		name = "ice";
-	    fire_bolt(&hero, &delta, name);
+	    fire_bolt(rs,&hero, &delta, name);
 	    ws_info[obj->o_which].oi_know = TRUE;
 	when WS_NOP:
 	    break;
 #ifdef MASTER
 	otherwise:
-	    msg("what a bizarre schtick!");
+	    msg(rs,"what a bizarre schtick!");
 #endif
     }
     obj->o_charges--;
@@ -246,7 +246,7 @@ do_zap()
  */
 
 void
-drain()
+drain(struct rogue_state *rs)
 {
     THING *mp;
     struct room *corp;
@@ -272,7 +272,7 @@ drain()
 		*dp++ = mp;
     if ((cnt = (int)(dp - drainee)) == 0)
     {
-	msg("you have a tingling feeling");
+	msg(rs,"you have a tingling feeling");
 	return;
     }
     *dp = NULL;
@@ -285,9 +285,9 @@ drain()
     {
 	mp = *dp;
 	if ((mp->t_stats.s_hpt -= cnt) <= 0)
-	    killed(mp, see_monst(mp));
+	    killed(rs,mp, see_monst(mp));
 	else
-	    runto(&mp->t_pos);
+	    runto(rs,&mp->t_pos);
     }
 }
 
@@ -297,7 +297,7 @@ drain()
  */
 
 void
-fire_bolt(coord *start, coord *dir, char *name)
+fire_bolt(struct rogue_state *rs,coord *start, coord *dir, char *name)
 {
     coord *c1, *c2;
     THING *tp;
@@ -349,7 +349,7 @@ fire_bolt(coord *start, coord *dir, char *name)
 		dir->y = -dir->y;
 		dir->x = -dir->x;
 		c1--;
-		msg("the %s bounces", name);
+		msg(rs,"the %s bounces", name);
 		break;
 	    default:
 def:
@@ -364,22 +364,22 @@ def:
 			used = TRUE;
 			if (tp->t_type == 'D' && strcmp(name, "flame") == 0)
 			{
-			    addmsg("the flame bounces");
+			    addmsg(rs,"the flame bounces");
 			    if (!terse)
-				addmsg(" off the dragon");
-			    endmsg();
+				addmsg(rs," off the dragon");
+			    endmsg(rs);
 			}
 			else
-			    hit_monster(unc(pos), &bolt);
+			    hit_monster(rs,unc(pos), &bolt);
 		    }
 		    else if (ch != 'M' || tp->t_disguise == 'M')
 		    {
 			if (start == &hero)
-			    runto(&pos);
+			    runto(rs,&pos);
 			if (terse)
-			    msg("%s misses", name);
+			    msg(rs,"%s misses", name);
 			else
-			    msg("the %s whizzes past %s", name, set_mname(tp));
+			    msg(rs,"the %s whizzes past %s", name, set_mname(tp));
 		    }
 		}
 		else if (hit_hero && ce(pos, hero))
@@ -397,12 +397,12 @@ def:
 			}
 			used = TRUE;
 			if (terse)
-			    msg("the %s hits", name);
+			    msg(rs,"the %s hits", name);
 			else
-			    msg("you are hit by the %s", name);
+			    msg(rs,"you are hit by the %s", name);
 		    }
 		    else
-			msg("the %s whizzes by you", name);
+			msg(rs,"the %s whizzes by you", name);
 		}
 		mvaddch(pos.y, pos.x, dirch);
 		refresh();

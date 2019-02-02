@@ -99,6 +99,7 @@
  */
 
 #include <stdlib.h>
+#include <time.h>
 
 #undef SIGTSTP
 
@@ -106,7 +107,7 @@
 #define MAXLINES	32	/* maximum number of screen lines used */
 #define MAXCOLS		80	/* maximum number of screen columns used */
 
-#define RN		(((seed = seed*11109+13849) >> 16) & 0xffff)
+#define RN		((int32_t)((seed = seed*11109+13849) >> 16) & 0xffff)
 #ifdef CTRL
 #undef CTRL
 #endif
@@ -127,71 +128,54 @@ extern FILE	*scoreboard;
  */
 
 void    auto_save(int);
-void	come_down();
-void	doctor();
-void	end_line();
 void    endit(int sig);
-void	fatal();
-void	getltchars();
-void	land();
+void	fatal(char *);
+void	getltchars(void);
 void    leave(int);
-void	my_exit();
-void	nohaste();
-void	playit();
+void	my_exit(int st);
 void    playltchars(void);
-void	print_disc(char);
 void    quit(int);
 void    resetltchars(void);
-void	rollwand();
-void	runners();
-void	set_order();
-void	sight();
-void	stomach();
-void	swander();
+void	set_order(int *order, int numthings);
 void	tstp(int ignored);
-void	unconfuse();
-void	unsee();
-void	visuals();
-
-char	add_line(char *fmt, char *arg);
 
 char	*killname(char monst, bool doart);
 char	*nothing(char type);
 char	*type_name(int type);
 
 #ifdef CHECKTIME
-int	checkout();
+int	checkout(void);
 #endif
 
 int	md_chmod(char *filename, int mode);
 char	*md_crypt(char *key, char *salt);
-int	md_dsuspchar();
-int	md_erasechar();
-char	*md_gethomedir();
-char	*md_getusername();
-int	md_getuid();
+int	md_dsuspchar(void);
+int	md_erasechar(void);
+char	*md_gethomedir(void);
+char	*md_getusername(void);
+int	md_getuid(void);
 char	*md_getpass(char *prompt);
-int	md_getpid();
+int	md_getpid(void);
 char	*md_getrealname(int uid);
-void	md_init();
-int	md_killchar();
-void	md_normaluser();
-void	md_raw_standout();
-void	md_raw_standend();
-int	md_readchar();
+void	md_init(void);
+int	md_killchar(void);
+void	md_normaluser(void);
+void	md_raw_standout(void);
+void	md_raw_standend(void);
+int	md_readchar(void);
 int	md_setdsuspchar(int c);
-int	md_shellescape();
+int	md_shellescape(void);
 void	md_sleep(int s);
-int	md_suspchar();
-int	md_hasclreol();
+int	md_suspchar(void);
+int	md_hasclreol(void);
 int	md_unlink(char *file);
 int	md_unlink_open_file(char *file, FILE *inf);
-void md_tstpsignal();
-void md_tstphold();
-void md_tstpresume();
-void md_ignoreallsignals();
-void md_onsignal_autosave();
-void md_onsignal_exit();
-void md_onsignal_default();
+void md_tstpsignal(void);
+void md_tstphold(void);
+void md_tstpresume(void);
+void md_ignoreallsignals(void);
+void md_onsignal_autosave(void);
+void md_onsignal_exit(void);
+void md_onsignal_default(void);
 int md_issymlink(char *sp);
 

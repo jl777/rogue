@@ -280,7 +280,7 @@ author()
  *	Check each CHECKTIME seconds to see if the load is too high
  */
 
-checkout(int sig)
+checkout(struct rogue_state *rs,int sig)
 {
     static char *msgs[] = {
 	"The load is too high to be playing.  Please leave in %0.1f minutes",
@@ -294,19 +294,19 @@ checkout(int sig)
 	if (author())
 	{
 	    num_checks = 1;
-	    chmsg("The load is rather high, O exaulted one");
+	    chmsg(rs,"The load is rather high, O exaulted one");
 	}
 	else if (num_checks++ == 3)
 	    fatal("Sorry.  You took too long.  You are dead\n");
 	checktime = (CHECKTIME * 60) / num_checks;
-	chmsg(msgs[num_checks - 1], ((double) checktime / 60.0));
+	chmsg(rs,msgs[num_checks - 1], ((double) checktime / 60.0));
     }
     else
     {
 	if (num_checks)
 	{
 	    num_checks = 0;
-	    chmsg("The load has dropped back down.  You have a reprieve");
+	    chmsg(rs,"The load has dropped back down.  You have a reprieve");
 	}
 	checktime = (CHECKTIME * 60);
     }
@@ -321,10 +321,10 @@ checkout(int sig)
  */
 /* VARARGS1 */
 
-chmsg(char *fmt, int arg)
+chmsg(struct rogue_state *rs,char *fmt, int arg)
 {
     if (!in_shell)
-	msg(fmt, arg);
+	msg(rs,fmt, arg);
     else
     {
 	printf(fmt, arg);

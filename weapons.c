@@ -42,26 +42,26 @@ static struct init_weaps {
  */
 
 void
-missile(int ydelta, int xdelta)
+missile(struct rogue_state *rs,int ydelta, int xdelta)
 {
     THING *obj;
 
     /*
      * Get which thing we are hurling
      */
-    if ((obj = get_item("throw", WEAPON)) == NULL)
+    if ((obj = get_item(rs,"throw", WEAPON)) == NULL)
 	return;
-    if (!dropcheck(obj) || is_current(obj))
+    if (!dropcheck(rs,obj) || is_current(rs,obj))
 	return;
-    obj = leave_pack(obj, TRUE, FALSE);
-    do_motion(obj, ydelta, xdelta);
+    obj = leave_pack(rs,obj, TRUE, FALSE);
+    do_motion(rs,obj, ydelta, xdelta);
     /*
      * AHA! Here it has hit something.  If it is a wall or a door,
      * or if it misses (combat) the monster, put it on the floor
      */
     if (moat(obj->o_pos.y, obj->o_pos.x) == NULL ||
-	!hit_monster(unc(obj->o_pos), obj))
-	    fall(obj, TRUE);
+	!hit_monster(rs,unc(obj->o_pos), obj))
+	    fall(rs,obj, TRUE);
 }
 
 /*
@@ -71,7 +71,7 @@ missile(int ydelta, int xdelta)
  */
 
 void
-do_motion(THING *obj, int ydelta, int xdelta)
+do_motion(struct rogue_state *rs,THING *obj, int ydelta, int xdelta)
 {
     int ch;
 
@@ -84,7 +84,7 @@ do_motion(THING *obj, int ydelta, int xdelta)
 	/*
 	 * Erase the old one
 	 */
-	if (!ce(obj->o_pos, hero) && cansee(unc(obj->o_pos)) && !terse)
+	if (!ce(obj->o_pos, hero) && cansee(rs,unc(obj->o_pos)) && !terse)
 	{
 	    ch = chat(obj->o_pos.y, obj->o_pos.x);
 	    if (ch == FLOOR && !show_floor())
@@ -102,7 +102,7 @@ do_motion(THING *obj, int ydelta, int xdelta)
 	     * It hasn't hit anything yet, so display it
 	     * If it alright.
 	     */
-	    if (cansee(unc(obj->o_pos)) && !terse)
+	    if (cansee(rs,unc(obj->o_pos)) && !terse)
 	    {
 		mvaddch(obj->o_pos.y, obj->o_pos.x, obj->o_type);
 		refresh();
@@ -119,7 +119,7 @@ do_motion(THING *obj, int ydelta, int xdelta)
  */
 
 void
-fall(THING *obj, bool pr)
+fall(struct rogue_state *rs,THING *obj, bool pr)
 {
     PLACE *pp;
     static coord fpos;
@@ -129,7 +129,7 @@ fall(THING *obj, bool pr)
 	pp = INDEX(fpos.y, fpos.x);
 	pp->p_ch = (char) obj->o_type;
 	obj->o_pos = fpos;
-	if (cansee(fpos.y, fpos.x))
+	if (cansee(rs,fpos.y, fpos.x))
 	{
 	    if (pp->p_monst != NULL)
 		pp->p_monst->t_oldch = (char) obj->o_type;
@@ -143,10 +143,10 @@ fall(THING *obj, bool pr)
     {
 	if (has_hit)
 	{
-	    endmsg();
+	    endmsg(rs);
 	    has_hit = FALSE;
 	}
-	msg("the %s vanishes as it hits the ground",
+	msg(rs,"the %s vanishes as it hits the ground",
 	    weap_info[obj->o_which].oi_name);
     }
     discard(obj);
@@ -193,13 +193,13 @@ init_weapon(THING *weap, int which)
  *	Does the missile hit the monster?
  */
 int
-hit_monster(int y, int x, THING *obj)
+hit_monster(struct rogue_state *rs,int y, int x, THING *obj)
 {
     static coord mp;
 
     mp.y = y;
     mp.x = x;
-    return fight(&mp, obj, TRUE);
+    return fight(rs,&mp, obj, TRUE);
 }
 
 /*
@@ -223,19 +223,19 @@ num(int n1, int n2, char type)
  */
 
 void
-wield()
+wield(struct rogue_state *rs)
 {
     THING *obj, *oweapon;
     char *sp;
 
     oweapon = cur_weapon;
-    if (!dropcheck(cur_weapon))
+    if (!dropcheck(rs,cur_weapon))
     {
 	cur_weapon = oweapon;
 	return;
     }
     cur_weapon = oweapon;
-    if ((obj = get_item("wield", WEAPON)) == NULL)
+    if ((obj = get_item(rs,"wield", WEAPON)) == NULL)
     {
 bad:
 	after = FALSE;
@@ -244,17 +244,17 @@ bad:
 
     if (obj->o_type == ARMOR)
     {
-	msg("you can't wield armor");
+	msg(rs,"you can't wield armor");
 	goto bad;
     }
-    if (is_current(obj))
+    if (is_current(rs,obj))
         goto bad;
 
     sp = inv_name(obj, TRUE);
     cur_weapon = obj;
     if (!terse)
-	addmsg("you are now ");
-    msg("wielding %s (%c)", sp, obj->o_packch);
+	addmsg(rs,"you are now ");
+    msg(rs,"wielding %s (%c)", sp, obj->o_packch);
 }
 
 /*

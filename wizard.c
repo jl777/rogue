@@ -23,28 +23,28 @@
  */
 
 void
-whatis(bool insist, int type)
+whatis(struct rogue_state *rs,bool insist, int type)
 {
     THING *obj;
 
     if (pack == NULL)
     {
-	msg("you don't have anything in your pack to identify");
+	msg(rs,"you don't have anything in your pack to identify");
 	return;
     }
 
     for (;;)
     {
-	obj = get_item("identify", type);
+	obj = get_item(rs,"identify", type);
 	if (insist)
 	{
 	    if (n_objs == 0)
 		return;
 	    else if (obj == NULL)
-		msg("you must identify something");
+		msg(rs,"you must identify something");
 	    else if (type && obj->o_type != type &&
 	       !(type == R_OR_S && (obj->o_type == RING || obj->o_type == STICK)) )
-		    msg("you must identify a %s", type_name(type));
+		    msg(rs,"you must identify a %s", type_name(type));
 	    else
 		break;
 	}
@@ -69,7 +69,7 @@ whatis(bool insist, int type)
         when RING:
 	    set_know(obj, ring_info);
     }
-    msg(inv_name(obj, FALSE));
+    msg(rs,inv_name(obj, FALSE));
 }
 
 /*
@@ -125,24 +125,24 @@ type_name(int type)
  */
 
 void
-create_obj()
+create_obj(struct rogue_state *rs)
 {
     THING *obj;
     char ch, bless;
 
     obj = new_item();
-    msg("type of item: ");
-    obj->o_type = readchar();
+    msg(rs,"type of item: ");
+    obj->o_type = readchar(rs);
     mpos = 0;
-    msg("which %c do you want? (0-f)", obj->o_type);
-    obj->o_which = (isdigit((ch = readchar())) ? ch - '0' : ch - 'a' + 10);
+    msg(rs,"which %c do you want? (0-f)", obj->o_type);
+    obj->o_which = (isdigit((ch = readchar(rs))) ? ch - '0' : ch - 'a' + 10);
     obj->o_group = 0;
     obj->o_count = 1;
     mpos = 0;
     if (obj->o_type == WEAPON || obj->o_type == ARMOR)
     {
-	msg("blessing? (+,-,n)");
-	bless = readchar();
+	msg(rs,"blessing? (+,-,n)");
+	bless = readchar(rs);
 	mpos = 0;
 	if (bless == '-')
 	    obj->o_flags |= ISCURSED;
@@ -170,8 +170,8 @@ create_obj()
 	    case R_ADDSTR:
 	    case R_ADDHIT:
 	    case R_ADDDAM:
-		msg("blessing? (+,-,n)");
-		bless = readchar();
+		msg(rs,"blessing? (+,-,n)");
+		bless = readchar(rs);
 		mpos = 0;
 		if (bless == '-')
 		    obj->o_flags |= ISCURSED;
@@ -184,10 +184,10 @@ create_obj()
 	fix_stick(obj);
     else if (obj->o_type == GOLD)
     {
-	msg("how much?");
+	msg(rs,"how much?");
 	get_num(&obj->o_goldval, stdscr);
     }
-    add_pack(obj, FALSE);
+    add_pack(rs,obj, FALSE);
 }
 #endif
 
@@ -197,22 +197,22 @@ create_obj()
  */
 
 void
-teleport()
+teleport(struct rogue_state *rs)
 {
     static coord c;
 
     mvaddch(hero.y, hero.x, floor_at());
     find_floor((struct room *) NULL, &c, FALSE, TRUE);
-    if (roomin(&c) != proom)
+    if (roomin(rs,&c) != proom)
     {
-	leave_room(&hero);
+	leave_room(rs,&hero);
 	hero = c;
-	enter_room(&hero);
+	enter_room(rs,&hero);
     }
     else
     {
 	hero = c;
-	look(TRUE);
+	look(rs,TRUE);
     }
     mvaddch(hero.y, hero.x, PLAYER);
     /*
@@ -236,15 +236,15 @@ teleport()
  *	See if user knows password
  */
 int
-passwd()
+passwd(struct rogue_state *rs)
 {
     char *sp, c;
     static char buf[MAXSTR];
 
-    msg("wizard's Password:");
+    msg(rs,"wizard's Password:");
     mpos = 0;
     sp = buf;
-    while ((c = readchar()) != '\n' && c != '\r' && c != ESCAPE)
+    while ((c = readchar(rs)) != '\n' && c != '\r' && c != ESCAPE)
 	if (c == md_killchar())
 	    sp = buf;
 	else if (c == md_erasechar() && sp > buf)
@@ -263,7 +263,7 @@ passwd()
  */
 
 void
-show_map()
+show_map(struct rogue_state *rs)
 {
     int y, x, real;
 
@@ -279,6 +279,6 @@ show_map()
 	    if (!real)
 		wstandend(hw);
 	}
-    show_win("---More (level map)---");
+    show_win(rs,"---More (level map)---");
 }
 #endif

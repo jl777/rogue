@@ -28,7 +28,7 @@ typedef struct spot {		/* position matrix for maze positions */
  */
 
 void
-do_rooms()
+do_rooms(struct rogue_state *rs)
 {
     int i;
     struct room *rp;
@@ -137,8 +137,8 @@ do_rooms()
 	{
 	    tp = new_item();
 	    find_floor(rp, &mp, FALSE, TRUE);
-	    new_monster(tp, randmonster(FALSE), &mp);
-	    give_pack(tp);
+	    new_monster(rs,tp, randmonster(FALSE), &mp);
+	    give_pack(rs,tp);
 	}
     }
 }
@@ -371,15 +371,15 @@ find_floor(struct room *rp, coord *cp, int limit, bool monst)
  */
 
 void
-enter_room(coord *cp)
+enter_room(struct rogue_state *rs,coord *cp)
 {
     struct room *rp;
     THING *tp;
     int y, x;
     char ch;
 
-    rp = proom = roomin(cp);
-    door_open(rp);
+    rp = proom = roomin(rs,cp);
+    door_open(rs,rp);
     if (!(rp->r_flags & ISDARK) && !on(player, ISBLIND))
 	for (y = rp->r_pos.y; y < rp->r_max.y + rp->r_pos.y; y++)
 	{
@@ -418,7 +418,7 @@ enter_room(coord *cp)
  */
 
 void
-leave_room(coord *cp)
+leave_room(struct rogue_state *rs,coord *cp)
 {
     PLACE *pp;
     struct room *rp;
@@ -468,5 +468,5 @@ leave_room(coord *cp)
 		    }
 	    }
 	}
-    door_open(rp);
+    door_open(rs,rp);
 }

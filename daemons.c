@@ -18,7 +18,7 @@
  *	A healing daemon that restors hit points after rest
  */
 void
-doctor()
+doctor(struct rogue_state *rs,int arg)
 {
     register int lv, ohp;
 
@@ -50,7 +50,7 @@ doctor()
  *	Called when it is time to start rolling for wandering monsters
  */
 void
-swander()
+swander(struct rogue_state *rs,int arg)
 {
     start_daemon(rollwand, 0, BEFORE);
 }
@@ -61,14 +61,13 @@ swander()
  */
 int between = 0;
 void
-rollwand()
+rollwand(struct rogue_state *rs,int arg)
 {
-
     if (++between >= 4)
     {
 	if (roll(1, 6) == 4)
 	{
-	    wanderer();
+	    wanderer(rs);
 	    kill_daemon(rollwand);
 	    fuse(swander, 0, WANDERTIME, BEFORE);
 	}
@@ -81,10 +80,10 @@ rollwand()
  *	Release the poor player from his confusion
  */
 void
-unconfuse()
+unconfuse(struct rogue_state *rs,int arg)
 {
     player.t_flags &= ~ISHUH;
-    msg("you feel less %s now", choose_str("trippy", "confused"));
+    msg(rs,"you feel less %s now", choose_str("trippy", "confused"));
 }
 
 /*
@@ -92,7 +91,7 @@ unconfuse()
  *	Turn off the ability to see invisible
  */
 void
-unsee()
+unsee(struct rogue_state *rs,int arg)
 {
     register THING *th;
 
@@ -107,15 +106,15 @@ unsee()
  *	He gets his sight back
  */
 void
-sight()
+sight(struct rogue_state *rs,int arg)
 {
     if (on(player, ISBLIND))
     {
 	extinguish(sight);
 	player.t_flags &= ~ISBLIND;
 	if (!(proom->r_flags & ISGONE))
-	    enter_room(&hero);
-	msg(choose_str("far out!  Everything is all cosmic again",
+	    enter_room(rs,&hero);
+	msg(rs,choose_str("far out!  Everything is all cosmic again",
 		       "the veil of darkness lifts"));
     }
 }
@@ -125,10 +124,10 @@ sight()
  *	End the hasting
  */
 void
-nohaste()
+nohaste(struct rogue_state *rs,int arg)
 {
     player.t_flags &= ~ISHASTE;
-    msg("you feel yourself slowing down");
+    msg(rs,"you feel yourself slowing down");
 }
 
 /*
@@ -136,7 +135,7 @@ nohaste()
  *	Digest the hero's food
  */
 void
-stomach()
+stomach(struct rogue_state *rs,int arg)
 {
     register int oldfood;
     int orig_hungry = hungry_state;
@@ -153,9 +152,9 @@ stomach()
 	no_command += rnd(8) + 4;
 	hungry_state = 3;
 	if (!terse)
-	    addmsg(choose_str("the munchies overpower your motor capabilities.  ",
+	    addmsg(rs,choose_str("the munchies overpower your motor capabilities.  ",
 			      "you feel too weak from lack of food.  "));
-	msg(choose_str("You freak out", "You faint"));
+	msg(rs,choose_str("You freak out", "You faint"));
     }
     else
     {
@@ -165,16 +164,16 @@ stomach()
 	if (food_left < MORETIME && oldfood >= MORETIME)
 	{
 	    hungry_state = 2;
-	    msg(choose_str("the munchies are interfering with your motor capabilites",
+	    msg(rs,choose_str("the munchies are interfering with your motor capabilites",
 			   "you are starting to feel weak"));
 	}
 	else if (food_left < 2 * MORETIME && oldfood >= 2 * MORETIME)
 	{
 	    hungry_state = 1;
 	    if (terse)
-		msg(choose_str("getting the munchies", "getting hungry"));
+		msg(rs,choose_str("getting the munchies", "getting hungry"));
 	    else
-		msg(choose_str("you are getting the munchies",
+		msg(rs,choose_str("you are getting the munchies",
 			       "you are starting to get hungry"));
 	}
     }
@@ -191,7 +190,7 @@ stomach()
  *	Take the hero down off her acid trip.
  */
 void
-come_down()
+come_down(struct rogue_state *rs,int arg)
 {
     register THING *tp;
     register bool seemonst;
@@ -209,7 +208,7 @@ come_down()
      * undo the things
      */
     for (tp = lvl_obj; tp != NULL; tp = next(tp))
-	if (cansee(tp->o_pos.y, tp->o_pos.x))
+	if (cansee(rs,tp->o_pos.y, tp->o_pos.x))
 	    mvaddch(tp->o_pos.y, tp->o_pos.x, tp->o_type);
 
     /*
@@ -219,7 +218,7 @@ come_down()
     for (tp = mlist; tp != NULL; tp = next(tp))
     {
 	move(tp->t_pos.y, tp->t_pos.x);
-	if (cansee(tp->t_pos.y, tp->t_pos.x))
+	if (cansee(rs,tp->t_pos.y, tp->t_pos.x))
 	    if (!on(*tp, ISINVIS) || on(player, CANSEE))
 		addch(tp->t_disguise);
 	    else
@@ -231,7 +230,7 @@ come_down()
 	    standend();
 	}
     }
-    msg("Everything looks SO boring now.");
+    msg(rs,"Everything looks SO boring now.");
 }
 
 /*
@@ -239,7 +238,7 @@ come_down()
  *	change the characters for the player
  */
 void
-visuals()
+visuals(struct rogue_state *rs,int arg)
 {
     register THING *tp;
     register bool seemonst;
@@ -250,13 +249,13 @@ visuals()
      * change the things
      */
     for (tp = lvl_obj; tp != NULL; tp = next(tp))
-	if (cansee(tp->o_pos.y, tp->o_pos.x))
+	if (cansee(rs,tp->o_pos.y, tp->o_pos.x))
 	    mvaddch(tp->o_pos.y, tp->o_pos.x, rnd_thing());
 
     /*
      * change the stairs
      */
-    if (!seenstairs && cansee(stairs.y, stairs.x))
+    if (!seenstairs && cansee(rs,stairs.y, stairs.x))
 	mvaddch(stairs.y, stairs.x, rnd_thing());
 
     /*
@@ -287,9 +286,9 @@ visuals()
  *	Land from a levitation potion
  */
 void
-land()
+land(struct rogue_state *rs,int arg)
 {
     player.t_flags &= ~ISLEVIT;
-    msg(choose_str("bummer!  You've hit the ground",
+    msg(rs,choose_str("bummer!  You've hit the ground",
 		   "you float gently to the ground"));
 }

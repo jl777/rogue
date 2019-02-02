@@ -32,7 +32,7 @@ struct optstruct {
 				/* function to print value */
     void 	(*o_putfunc)(void *opt);
 				/* function to get value interactively */
-    int		(*o_getfunc)(void *opt, WINDOW *win);
+    int		(*o_getfunc)(struct rogue_state *rs,void *opt, WINDOW *win);
 };
 
 typedef struct optstruct	OPTION;
@@ -68,7 +68,7 @@ OPTION	optlist[] = {
  */
 
 void
-option()
+option(struct rogue_state *rs)
 {
     OPTION	*op;
     int		retval;
@@ -90,7 +90,7 @@ option()
     for (op = optlist; op <= &optlist[NUM_OPTS-1]; op++)
     {
 	pr_optname(op);
-	retval = (*op->o_getfunc)(op->o_opt, hw);
+	retval = (*op->o_getfunc)(rs,op->o_opt, hw);
 	if (retval)
 	{
 	    if (retval == QUIT)
@@ -113,7 +113,7 @@ option()
     wmove(hw, LINES - 1, 0);
     waddstr(hw, "--Press space to continue--");
     wrefresh(hw);
-    wait_for(' ');
+    wait_for(rs,' ');
     clearok(curscr, TRUE);
     touchwin(stdscr);
     after = FALSE;
@@ -168,7 +168,7 @@ put_inv_t(void *ip)
  *	Allow changing a boolean option and print it out
  */
 int
-get_bool(void *vp, WINDOW *win)
+get_bool(struct rogue_state *rs,void *vp, WINDOW *win)
 {
     bool *bp = (bool *) vp;
     int oy, ox;
@@ -181,7 +181,7 @@ get_bool(void *vp, WINDOW *win)
     {
 	wmove(win, oy, ox);
 	wrefresh(win);
-	switch (readchar())
+	switch (readchar(rs))
 	{
 	    case 't':
 	    case 'T':
@@ -218,14 +218,14 @@ get_bool(void *vp, WINDOW *win)
  *	!see_floor.
  */
 int
-get_sf(void *vp, WINDOW *win)
+get_sf(struct rogue_state *rs,void *vp, WINDOW *win)
 {
     bool	*bp = (bool *) vp;
     bool	was_sf;
     int		retval;
 
     was_sf = see_floor;
-    retval = get_bool(bp, win);
+    retval = get_bool(rs,bp, win);
     if (retval == QUIT) return(QUIT);
     if (was_sf != see_floor)
     {
@@ -235,7 +235,7 @@ get_sf(void *vp, WINDOW *win)
 	    see_floor = FALSE;
 	}
 	else
-	    look(FALSE);
+	    look(rs,FALSE);
     }
     return(NORM);
 }
@@ -247,7 +247,7 @@ get_sf(void *vp, WINDOW *win)
 #define MAXINP	50	/* max string to read from terminal or environment */
 
 int
-get_str(void *vopt, WINDOW *win)
+get_str(struct rogue_state *rs,void *vopt, WINDOW *win)
 {
     char *opt = (char *) vopt;
     char *sp;
@@ -261,7 +261,7 @@ get_str(void *vopt, WINDOW *win)
     /*
      * loop reading in the string, and put it in a temporary buffer
      */
-    for (sp = buf; (c = readchar()) != '\n' && c != '\r' && c != ESCAPE;
+    for (sp = buf; (c = readchar(rs)) != '\n' && c != '\r' && c != ESCAPE;
 	wclrtoeol(win), wrefresh(win))
     {
 	if (c == -1)
@@ -322,7 +322,7 @@ get_str(void *vopt, WINDOW *win)
  *	Get an inventory type name
  */
 int
-get_inv_t(void *vp, WINDOW *win)
+get_inv_t(struct rogue_state *rs,void *vp, WINDOW *win)
 {
     int *ip = (int *) vp;
     int oy, ox;
@@ -335,7 +335,7 @@ get_inv_t(void *vp, WINDOW *win)
     {
 	wmove(win, oy, ox);
 	wrefresh(win);
-	switch (readchar())
+	switch (readchar(rs))
 	{
 	    case 'o':
 	    case 'O':
@@ -376,13 +376,13 @@ get_inv_t(void *vp, WINDOW *win)
  *	Get a numeric option
  */
 int
-get_num(void *vp, WINDOW *win)
+get_num(struct rogue_state *rs,void *vp, WINDOW *win)
 {
     short *opt = (short *) vp;
     int i;
     static char buf[MAXSTR];
 
-    if ((i = get_str(buf, win)) == NORM)
+    if ((i = get_str(rs,buf, win)) == NORM)
 	*opt = (short) atoi(buf);
     return i;
 }

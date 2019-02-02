@@ -17,7 +17,7 @@
 typedef struct
 {
     int pa_flags;
-    void (*pa_daemon)();
+    void (*pa_daemon)(struct rogue_state *rs,int);
     int pa_time;
     char *pa_high, *pa_straight;
 } PACT;
@@ -56,13 +56,13 @@ static PACT p_actions[] =
  */
 
 void
-quaff()
+quaff(struct rogue_state *rs)
 {
     THING *obj, *tp, *mp;
     bool discardit = FALSE;
     bool show, trip;
 
-    obj = get_item("quaff", POTION);
+    obj = get_item(rs,"quaff", POTION);
     /*
      * Make certain that it is somethings that we want to drink
      */
@@ -71,9 +71,9 @@ quaff()
     if (obj->o_type != POTION)
     {
 	if (!terse)
-	    msg("yuk! Why would you want to drink that?");
+	    msg(rs,"yuk! Why would you want to drink that?");
 	else
-	    msg("that's undrinkable");
+	    msg(rs,"that's undrinkable");
 	return;
     }
     if (obj == cur_weapon)
@@ -84,36 +84,36 @@ quaff()
      */
     trip = on(player, ISHALU);
     discardit = (bool)(obj->o_count == 1);
-    leave_pack(obj, FALSE, FALSE);
+    leave_pack(rs,obj, FALSE, FALSE);
     switch (obj->o_which)
     {
 	case P_CONFUSE:
-	    do_pot(P_CONFUSE, !trip);
+	    do_pot(rs,P_CONFUSE, !trip);
 	when P_POISON:
 	    pot_info[P_POISON].oi_know = TRUE;
 	    if (ISWEARING(R_SUSTSTR))
-		msg("you feel momentarily sick");
+		msg(rs,"you feel momentarily sick");
 	    else
 	    {
 		chg_str(-(rnd(3) + 1));
-		msg("you feel very sick now");
-		come_down();
+		msg(rs,"you feel very sick now");
+		come_down(rs,0);
 	    }
 	when P_HEALING:
 	    pot_info[P_HEALING].oi_know = TRUE;
 	    if ((pstats.s_hpt += roll(pstats.s_lvl, 4)) > max_hp)
 		pstats.s_hpt = ++max_hp;
-	    sight();
-	    msg("you begin to feel better");
+	    sight(rs,0);
+	    msg(rs,"you begin to feel better");
 	when P_STRENGTH:
 	    pot_info[P_STRENGTH].oi_know = TRUE;
 	    chg_str(1);
-	    msg("you feel stronger, now.  What bulging muscles!");
+	    msg(rs,"you feel stronger, now.  What bulging muscles!");
 	when P_MFIND:
 	    player.t_flags |= SEEMONST;
-	    fuse((void(*)())turn_see, TRUE, HUHDURATION, AFTER);
+	    fuse((void(*)(struct rogue_state *rs,int))turn_see, TRUE, HUHDURATION, AFTER);
 	    if (!turn_see(FALSE))
-		msg("you have a %s feeling for a moment, then it passes",
+		msg(rs,"you have a %s feeling for a moment, then it passes",
 		    choose_str("normal", "strange"));
 	when P_TFIND:
 	    /*
@@ -149,10 +149,10 @@ quaff()
 	    if (show)
 	    {
 		pot_info[P_TFIND].oi_know = TRUE;
-		show_win("You sense the presence of magic on this level.--More--");
+		show_win(rs,"You sense the presence of magic on this level.--More--");
 	    }
 	    else
-		msg("you have a %s feeling for a moment, then it passes",
+		msg(rs,"you have a %s feeling for a moment, then it passes",
 		    choose_str("normal", "strange"));
 	when P_LSD:
 	    if (!trip)
@@ -162,18 +162,18 @@ quaff()
 		start_daemon(visuals, 0, BEFORE);
 		seenstairs = seen_stairs();
 	    }
-	    do_pot(P_LSD, TRUE);
+	    do_pot(rs,P_LSD, TRUE);
 	when P_SEEINVIS:
 	    sprintf(prbuf, "this potion tastes like %s juice", fruit);
 	    show = on(player, CANSEE);
-	    do_pot(P_SEEINVIS, FALSE);
+	    do_pot(rs,P_SEEINVIS, FALSE);
 	    if (!show)
 		invis_on();
-	    sight();
+	    sight(rs,0);
 	when P_RAISE:
 	    pot_info[P_RAISE].oi_know = TRUE;
-	    msg("you suddenly feel much more skillful");
-	    raise_level();
+	    msg(rs,"you suddenly feel much more skillful");
+	    raise_level(rs);
 	when P_XHEAL:
 	    pot_info[P_XHEAL].oi_know = TRUE;
 	    if ((pstats.s_hpt += roll(pstats.s_lvl, 8)) > max_hp)
@@ -182,14 +182,14 @@ quaff()
 		    ++max_hp;
 		pstats.s_hpt = ++max_hp;
 	    }
-	    sight();
-	    come_down();
-	    msg("you begin to feel much better");
+	    sight(rs,0);
+	    come_down(rs,0);
+	    msg(rs,"you begin to feel much better");
 	when P_HASTE:
 	    pot_info[P_HASTE].oi_know = TRUE;
 	    after = FALSE;
-	    if (add_haste(TRUE))
-		msg("you feel yourself moving much faster");
+	    if (add_haste(rs,TRUE))
+		msg(rs,"you feel yourself moving much faster");
 	when P_RESTORE:
 	    if (ISRING(LEFT, R_ADDSTR))
 		add_str(&pstats.s_str, -cur_ring[LEFT]->o_arm);
@@ -201,23 +201,23 @@ quaff()
 		add_str(&pstats.s_str, cur_ring[LEFT]->o_arm);
 	    if (ISRING(RIGHT, R_ADDSTR))
 		add_str(&pstats.s_str, cur_ring[RIGHT]->o_arm);
-	    msg("hey, this tastes great.  It make you feel warm all over");
+	    msg(rs,"hey, this tastes great.  It make you feel warm all over");
 	when P_BLIND:
-	    do_pot(P_BLIND, TRUE);
+	    do_pot(rs,P_BLIND, TRUE);
 	when P_LEVIT:
-	    do_pot(P_LEVIT, TRUE);
+	    do_pot(rs,P_LEVIT, TRUE);
 #ifdef MASTER
 	otherwise:
-	    msg("what an odd tasting potion!");
+	    msg(rs,"what an odd tasting potion!");
 	    return;
 #endif
     }
-    status();
+    status(rs);
     /*
      * Throw the item away
      */
 
-    call_it(&pot_info[obj->o_which]);
+    call_it(rs,&pot_info[obj->o_which]);
 
     if (discardit)
 	discard(obj);
@@ -341,10 +341,10 @@ seen_stairs()
  */
 
 void
-raise_level()
+raise_level(struct rogue_state *rs)
 {
     pstats.s_exp = e_levels[pstats.s_lvl-1] + 1L;
-    check_level();
+    check_level(rs);
 }
 
 /*
@@ -354,7 +354,7 @@ raise_level()
  */
 
 void
-do_pot(int type, bool knowit)
+do_pot(struct rogue_state *rs,int type, bool knowit)
 {
     PACT *pp;
     int t;
@@ -367,9 +367,9 @@ do_pot(int type, bool knowit)
     {
 	player.t_flags |= pp->pa_flags;
 	fuse(pp->pa_daemon, 0, t, AFTER);
-	look(FALSE);
+	look(rs,FALSE);
     }
     else
 	lengthen(pp->pa_daemon, t);
-    msg(choose_str(pp->pa_high, pp->pa_straight));
+    msg(rs,choose_str(pp->pa_high, pp->pa_straight));
 }

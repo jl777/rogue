@@ -17,34 +17,34 @@
  *	The player wants to wear something, so let him/her put it on.
  */
 void
-wear()
+wear(struct rogue_state *rs)
 {
     register THING *obj;
     register char *sp;
 
-    if ((obj = get_item("wear", ARMOR)) == NULL)
+    if ((obj = get_item(rs,"wear", ARMOR)) == NULL)
 	return;
     if (cur_armor != NULL)
     {
-	addmsg("you are already wearing some");
+	addmsg(rs,"you are already wearing some");
 	if (!terse)
-	    addmsg(".  You'll have to take it off first");
-	endmsg();
+	    addmsg(rs,".  You'll have to take it off first");
+	endmsg(rs);
 	after = FALSE;
 	return;
     }
     if (obj->o_type != ARMOR)
     {
-	msg("you can't wear that");
+	msg(rs,"you can't wear that");
 	return;
     }
-    waste_time();
+    waste_time(rs);
     obj->o_flags |= ISKNOW;
     sp = inv_name(obj, TRUE);
     cur_armor = obj;
     if (!terse)
-	addmsg("you are now ");
-    msg("wearing %s", sp);
+	addmsg(rs,"you are now ");
+    msg(rs,"wearing %s", sp);
 }
 
 /*
@@ -52,7 +52,7 @@ wear()
  *	Get the armor off of the players back
  */
 void
-take_off()
+take_off(struct rogue_state *rs)
 {
     register THING *obj;
 
@@ -60,19 +60,19 @@ take_off()
     {
 	after = FALSE;
 	if (terse)
-		msg("not wearing armor");
+		msg(rs,"not wearing armor");
 	else
-		msg("you aren't wearing any armor");
+		msg(rs,"you aren't wearing any armor");
 	return;
     }
-    if (!dropcheck(cur_armor))
+    if (!dropcheck(rs,cur_armor))
 	return;
     cur_armor = NULL;
     if (terse)
-	addmsg("was");
+	addmsg(rs,"was");
     else
-	addmsg("you used to be");
-    msg(" wearing %c) %s", obj->o_packch, inv_name(obj, TRUE));
+	addmsg(rs,"you used to be");
+    msg(rs," wearing %c) %s", obj->o_packch, inv_name(obj, TRUE));
 }
 
 /*
@@ -80,10 +80,10 @@ take_off()
  *	Do nothing but let other things happen
  */
 void
-waste_time()
+waste_time(struct rogue_state *rs)
 {
-    do_daemons(BEFORE);
-    do_fuses(BEFORE);
-    do_daemons(AFTER);
-    do_fuses(AFTER);
+    do_daemons(rs,BEFORE);
+    do_fuses(rs,BEFORE);
+    do_daemons(rs,AFTER);
+    do_fuses(rs,AFTER);
 }

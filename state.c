@@ -1237,12 +1237,13 @@ rs_write_rooms(FILE *savef, struct room r[], int count)
 
     if (write_error)
         return(WRITESTAT);
-
+    //fprintf(stderr,"rooms %ld -> ",ftell(savef));
     rs_write_int(savef, count);
     
     for(n = 0; n < count; n++)
         rs_write_room(savef, &r[n]);
-    
+    //fprintf(stderr,"%ld\n",ftell(savef));
+ 
     return(WRITESTAT);
 }
 
@@ -1340,6 +1341,7 @@ rs_write_object(FILE *savef, THING *o)
 {
     if (write_error)
         return(WRITESTAT);
+    //fprintf(stderr,"object %ld -> ",ftell(savef));
 
     rs_write_marker(savef, RSID_OBJECT);
     rs_write_int(savef, o->_o._o_type); 
@@ -1356,6 +1358,7 @@ rs_write_object(FILE *savef, THING *o)
     rs_write_int(savef, o->_o._o_flags);
     rs_write_int(savef, o->_o._o_group);
     rs_write_string(savef, o->_o._o_label);
+    //fprintf(stderr,"%ld\n",ftell(savef));
     return(WRITESTAT);
 }
 
@@ -1389,13 +1392,15 @@ rs_write_object_list(FILE *savef, THING *l)
 {
     if (write_error)
         return(WRITESTAT);
+    //fprintf(stderr,"list %ld -> ",ftell(savef));
 
     rs_write_marker(savef, RSID_OBJECTLIST);
     rs_write_int(savef, list_size(l));
 
     for( ;l != NULL; l = l->l_next)
         rs_write_object(savef, l);
-    
+    //fprintf(stderr,"%ld\n",ftell(savef));
+
     return(WRITESTAT);
 }
 
@@ -1413,7 +1418,7 @@ rs_read_object_list(FILE *inf, THING **list)
 
     for (i = 0; i < cnt; i++) 
     {
-        l = new_item(sizeof(THING));
+        l = new_item();//,sizeof(THING));
 
         memset(l,0,sizeof(THING));
 
@@ -1527,6 +1532,7 @@ rs_write_thing(FILE *savef, THING *t)
     
     if (write_error)
         return(WRITESTAT);
+    //fprintf(stderr,"thing %ld -> ",ftell(savef));
 
     rs_write_marker(savef, RSID_THING);
 
@@ -1605,7 +1611,8 @@ rs_write_thing(FILE *savef, THING *t)
     rs_write_stats(savef, &t->_t._t_stats);
     rs_write_room_reference(savef, t->_t._t_room);
     rs_write_object_list(savef, t->_t._t_pack);
-    
+    //fprintf(stderr,"%ld\n",ftell(savef));
+
     return(WRITESTAT);
 }
 
@@ -1846,7 +1853,8 @@ int
 rs_write_places(FILE *savef, PLACE *places, int count)
 {
     int i = 0;
-    
+    //fprintf(stderr,"places %ld -> ",ftell(savef));
+
     if (write_error)
         return(WRITESTAT);
 
@@ -1856,6 +1864,7 @@ rs_write_places(FILE *savef, PLACE *places, int count)
         rs_write_char(savef, places[i].p_flags);
         rs_write_thing_reference(savef, mlist, places[i].p_monst);
     }
+    //fprintf(stderr,"%ld\n",ftell(savef));
 
     return(WRITESTAT);
 }
@@ -1918,20 +1927,20 @@ rs_save_file(FILE *savef)
 #endif
     rs_write_booleans(savef, pack_used, 26);        /* 29 */
     rs_write_char(savef, dir_ch);
-    rs_write_chars(savef, file_name, MAXSTR);
-    rs_write_chars(savef, huh, MAXSTR);
+    //rs_write_chars(savef, file_name, MAXSTR);
+    //rs_write_chars(savef, huh, MAXSTR);
     rs_write_potions(savef);
-    rs_write_chars(savef,prbuf,2*MAXSTR);
+    //rs_write_chars(savef,prbuf,2*MAXSTR);
     rs_write_rings(savef);
     rs_write_string(savef,release);
     rs_write_char(savef, runch);
     rs_write_scrolls(savef);
     rs_write_char(savef, take);
-    rs_write_chars(savef, whoami, MAXSTR);
+    //rs_write_chars(savef, whoami, MAXSTR);
     rs_write_sticks(savef);
     rs_write_int(savef,orig_dsusp);
     rs_write_chars(savef, fruit, MAXSTR);
-    rs_write_chars(savef, home, MAXSTR);
+    //rs_write_chars(savef, home, MAXSTR);
     rs_write_strings(savef,inv_t_name,3);
     rs_write_char(savef,l_last_comm);
     rs_write_char(savef,l_last_dir);
@@ -1956,40 +1965,40 @@ rs_save_file(FILE *savef)
     rs_write_int(savef, purse);
     rs_write_int(savef, quiet);
     rs_write_int(savef, vf_hit);
-    rs_write_int(savef, dnum);
-    rs_write_int(savef, seed);
+    //rs_write_int(savef, dnum);
+    rs_write_int(savef, (int32_t)(seed&0xffffffff));
+    rs_write_int(savef, (int32_t)((seed>>32)&0xffffffff));
     rs_write_ints(savef, e_levels, 21);
     rs_write_coord(savef, delta);
     rs_write_coord(savef, oldpos);
     rs_write_coord(savef, stairs);
-
-    rs_write_thing(savef, &player);                     
+    rs_write_thing(savef, &player);
     rs_write_object_reference(savef, player.t_pack, cur_armor);
     rs_write_object_reference(savef, player.t_pack, cur_ring[0]);
     rs_write_object_reference(savef, player.t_pack, cur_ring[1]); 
     rs_write_object_reference(savef, player.t_pack, cur_weapon); 
     rs_write_object_reference(savef, player.t_pack, l_last_pick); 
     rs_write_object_reference(savef, player.t_pack, last_pick); 
-    
-    rs_write_object_list(savef, lvl_obj);               
+
+    rs_write_object_list(savef, lvl_obj);
     rs_write_thing_list(savef, mlist);                
 
     rs_write_places(savef,places,MAXLINES*MAXCOLS);
-
+    
     rs_write_stats(savef,&max_stats); 
     rs_write_rooms(savef, rooms, MAXROOMS);             
     rs_write_room_reference(savef, oldrp);              
     rs_write_rooms(savef, passages, MAXPASS);
 
-    rs_write_monsters(savef,monsters,26);               
-    rs_write_obj_info(savef, things,   NUMTHINGS);   
+    rs_write_monsters(savef,monsters,26);
+    rs_write_obj_info(savef, things,   NUMTHINGS);
     rs_write_obj_info(savef, arm_info,  MAXARMORS);  
     rs_write_obj_info(savef, pot_info,  MAXPOTIONS);  
     rs_write_obj_info(savef, ring_info,  MAXRINGS);    
     rs_write_obj_info(savef, scr_info,  MAXSCROLLS);  
     rs_write_obj_info(savef, weap_info,  MAXWEAPONS+1);  
     rs_write_obj_info(savef, ws_info, MAXSTICKS);      
-    
+
     
     rs_write_daemons(savef, &d_list[0], 20);            /* 5.4-daemon.c */
 #ifdef MASTER
@@ -2000,8 +2009,10 @@ rs_save_file(FILE *savef)
     rs_write_int(savef,between);                        /* 5.4-daemons.c*/
     rs_write_coord(savef, nh);                          /* 5.4-move.c    */
     rs_write_int(savef, group);                         /* 5.4-weapons.c */
+    //fprintf(stderr,"fifth %ld\n",ftell(savef));
 
     rs_write_window(savef,stdscr);
+    //fprintf(stderr,"done %ld\n",ftell(savef));
 
     return(WRITESTAT);
 }
@@ -2048,20 +2059,20 @@ rs_restore_file(FILE *inf)
 #endif
     rs_read_booleans(inf, pack_used, 26);       /* 29 */
     rs_read_char(inf, &dir_ch);
-    rs_read_chars(inf, file_name, MAXSTR);
-    rs_read_chars(inf, huh, MAXSTR);
+    //rs_read_chars(inf, file_name, MAXSTR);
+    //rs_read_chars(inf, huh, MAXSTR);
     rs_read_potions(inf);
-    rs_read_chars(inf, prbuf, 2*MAXSTR);
+    //rs_read_chars(inf, prbuf, 2*MAXSTR);
     rs_read_rings(inf);
     rs_read_new_string(inf,&release);
     rs_read_char(inf, &runch);
     rs_read_scrolls(inf);
     rs_read_char(inf, &take);
-    rs_read_chars(inf, whoami, MAXSTR);
+    //rs_read_chars(inf, whoami, MAXSTR);
     rs_read_sticks(inf);
     rs_read_int(inf,&orig_dsusp);
     rs_read_chars(inf, fruit, MAXSTR);
-    rs_read_chars(inf, home, MAXSTR);
+    //rs_read_chars(inf, home, MAXSTR);
     rs_read_new_strings(inf,inv_t_name,3);
     rs_read_char(inf, &l_last_comm);
     rs_read_char(inf, &l_last_dir);
@@ -2086,8 +2097,11 @@ rs_restore_file(FILE *inf)
     rs_read_int(inf, &purse);
     rs_read_int(inf, &quiet);
     rs_read_int(inf, &vf_hit);
-    rs_read_int(inf, &dnum);
-    rs_read_int(inf, &seed);
+    //rs_read_int(inf, &dnum);
+    int32_t lownum,highnum;
+    rs_read_int(inf, &lownum);
+    rs_read_int(inf, &highnum);
+    seed = ((uint64_t)highnum<<32) | (lownum&0xffffffff);
     rs_read_ints(inf,e_levels,21);
     rs_read_coord(inf, &delta);
     rs_read_coord(inf, &oldpos);

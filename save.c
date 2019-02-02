@@ -32,7 +32,7 @@ static STAT sbuf;
  */
 
 void
-save_game()
+save_game(struct rogue_state *rs)
 {
     FILE *savef;
     int c;
@@ -47,18 +47,18 @@ over:
     {
 	for (;;)
 	{
-	    msg("save file (%s)? ", file_name);
-	    c = readchar();
+	    msg(rs,"save file (%s)? ", file_name);
+	    c = readchar(rs);
 	    mpos = 0;
 	    if (c == ESCAPE)
 	    {
-		msg("");
+		msg(rs,"");
 		return;
 	    }
 	    else if (c == 'n' || c == 'N' || c == 'y' || c == 'Y')
 		break;
 	    else
-		msg("please answer Y or N");
+		msg(rs,"please answer Y or N");
 	}
 	if (c == 'y' || c == 'Y')
 	{
@@ -72,12 +72,12 @@ over:
     do
     {
 	mpos = 0;
-	msg("file name: ");
+	msg(rs,"file name: ");
 	buf[0] = '\0';
-	if (get_str(buf, stdscr) == QUIT)
+	if (get_str(rs,buf, stdscr) == QUIT)
 	{
 quit_it:
-	    msg("");
+	    msg(rs,"");
 	    return;
 	}
 	mpos = 0;
@@ -89,26 +89,26 @@ gotfile:
 	{
 	    for (;;)
 	    {
-		msg("File exists.  Do you wish to overwrite it?");
+		msg(rs,"File exists.  Do you wish to overwrite it?");
 		mpos = 0;
-		if ((c = readchar()) == ESCAPE)
+		if ((c = readchar(rs)) == ESCAPE)
 		    goto quit_it;
 		if (c == 'y' || c == 'Y')
 		    break;
 		else if (c == 'n' || c == 'N')
 		    goto over;
 		else
-		    msg("Please answer Y or N");
+		    msg(rs,"Please answer Y or N");
 	    }
-	    msg("file name: %s", buf);
+	    msg(rs,"file name: %s", buf);
 	    md_unlink(file_name);
 	}
 	strcpy(file_name, buf);
 	if ((savef = fopen(file_name, "w")) == NULL)
-	    msg(strerror(errno));
+	    msg(rs,strerror(errno));
     } while (savef == NULL);
 
-    save_file(savef);
+    save_file(savef,1);
     /* NOTREACHED */
 }
 
@@ -127,7 +127,7 @@ auto_save(int sig)
     md_ignoreallsignals();
     if (file_name[0] != '\0' && ((savef = fopen(file_name, "w")) != NULL ||
 	(md_unlink_open_file(file_name, savef) >= 0 && (savef = fopen(file_name, "w")) != NULL)))
-	    save_file(savef);
+	    save_file(savef,1);
     exit(0);
 }
 
@@ -137,7 +137,7 @@ auto_save(int sig)
  */
 
 void
-save_file(FILE *savef)
+save_file(FILE *savef,int32_t guiflag)
 {
     char buf[80];
     mvcur(0, COLS - 1, LINES - 1, 0); 
@@ -145,13 +145,17 @@ save_file(FILE *savef)
     endwin();
     resetltchars();
     md_chmod(file_name, 0400);
-    encwrite(version, strlen(version)+1, savef);
-    sprintf(buf,"%d x %d\n", LINES, COLS);
-    encwrite(buf,80,savef);
+    if ( guiflag != 0 )
+    {
+        encwrite(version, strlen(version)+1, savef);
+        sprintf(buf,"%d x %d\n", LINES, COLS);
+        encwrite(buf,80,savef);
+    }
     rs_save_file(savef);
     fflush(savef);
     fclose(savef);
-    exit(0);
+    if ( guiflag != 0 )
+        exit(0);
 }
 
 /*
@@ -160,7 +164,7 @@ save_file(FILE *savef)
  *	integrity from cheaters
  */
 bool
-restore(char *file, char **envp)
+restore(struct rogue_state *rs,char *file, char **envp)
 {
     FILE *inf;
     int syml;
@@ -259,9 +263,9 @@ restore(char *file, char **envp)
     environ = envp;
     strcpy(file_name, file);
     clearok(curscr, TRUE);
-    srand(md_getpid());
-    msg("file name: %s", file);
-    playit();
+    srand((int32_t)rs->seed);//md_getpid());
+    msg(rs,"file name: %s", file);
+    playit(rs);
     /*NOTREACHED*/
     return(0);
 }
@@ -270,6 +274,7 @@ restore(char *file, char **envp)
  * encwrite:
  *	Perform an encrypted write
  */
+#define CRYPT_ENABLE 0
 
 size_t
 encwrite(char *start, size_t size, FILE *outf)
@@ -284,16 +289,21 @@ encwrite(char *start, size_t size, FILE *outf)
 
     while(size)
     {
-	if (putc(*start++ ^ *e1 ^ *e2 ^ fb, outf) == EOF)
+        if ( CRYPT_ENABLE )
+        {
+            if (putc(*start++ ^ *e1 ^ *e2 ^ fb, outf) == EOF)
+                break;
+            
+            temp = *e1++;
+            fb = fb + ((char) (temp * *e2++));
+            if (*e1 == '\0')
+                e1 = encstr;
+            if (*e2 == '\0')
+                e2 = statlist;
+        }
+        else if ( putc(*start++,outf) == EOF )
             break;
-
-	temp = *e1++;
-	fb = fb + ((char) (temp * *e2++));
-	if (*e1 == '\0')
-	    e1 = encstr;
-	if (*e2 == '\0')
-	    e2 = statlist;
-	size--;
+        size--;
     }
 
     return(o_size - size);
@@ -315,21 +325,21 @@ encread(char *start, size_t size, FILE *inf)
 
     if ((read_size = fread(start,1,size,inf)) == 0 || read_size == -1)
 	return(read_size);
-
-    e1 = encstr;
-    e2 = statlist;
-
-    while (size--)
+    if ( CRYPT_ENABLE )
     {
-	*start++ ^= *e1 ^ *e2 ^ fb;
-	temp = *e1++;
-	fb = fb + (char)(temp * *e2++);
-	if (*e1 == '\0')
-	    e1 = encstr;
-	if (*e2 == '\0')
-	    e2 = statlist;
+        e1 = encstr;
+        e2 = statlist;
+        while (size--)
+        {
+            *start++ ^= *e1 ^ *e2 ^ fb;
+            temp = *e1++;
+            fb = fb + (char)(temp * *e2++);
+            if (*e1 == '\0')
+                e1 = encstr;
+            if (*e2 == '\0')
+                e2 = statlist;
+        }
     }
-
     return(read_size);
 }
 

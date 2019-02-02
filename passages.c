@@ -20,7 +20,7 @@
  */
 
 void
-do_passages()
+do_passages(struct rogue_state *rs)
 {
     struct rdes *r1, *r2 = NULL;
     int i, j;
@@ -87,7 +87,7 @@ do_passages()
 	    r2->ingraph = TRUE;
 	    i = (int)(r1 - rdes);
 	    j = (int)(r2 - rdes);
-	    conn(i, j);
+	    conn(rs,i, j);
 	    r1->isconn[j] = TRUE;
 	    r2->isconn[i] = TRUE;
 	    roomcount++;
@@ -116,7 +116,7 @@ do_passages()
 	{
 	    i = (int)(r1 - rdes);
 	    j = (int)(r2 - rdes);
-	    conn(i, j);
+	    conn(rs,i, j);
 	    r1->isconn[j] = TRUE;
 	    r2->isconn[i] = TRUE;
 	}
@@ -130,7 +130,7 @@ do_passages()
  */
 
 void
-conn(int r1, int r2)
+conn(struct rogue_state *rs,int r1, int r2)
 {
     struct room *rpf, *rpt = NULL;
     int rmt;
@@ -262,7 +262,7 @@ conn(int r1, int r2)
     curr.x += del.x;
     curr.y += del.y;
     if (!ce(curr, epos))
-	msg("warning, connectivity problem on this level");
+	msg(rs,"warning, connectivity problem on this level");
 }
 
 /*

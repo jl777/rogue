@@ -57,7 +57,7 @@ randmonster(bool wander)
  */
 
 void
-new_monster(THING *tp, char type, coord *cp)
+new_monster(struct rogue_state *rs,THING *tp, char type, coord *cp)
 {
     struct monster *mp;
     int lev_add;
@@ -70,7 +70,7 @@ new_monster(THING *tp, char type, coord *cp)
     tp->t_pos = *cp;
     move(cp->y, cp->x);
     tp->t_oldch = CCHAR( inch() );
-    tp->t_room = roomin(cp);
+    tp->t_room = roomin(rs,cp);
     moat(cp->y, cp->x) = tp;
     mp = &monsters[tp->t_type-'A'];
     tp->t_stats.s_lvl = mp->m_stats.s_lvl + lev_add;
@@ -85,7 +85,7 @@ new_monster(THING *tp, char type, coord *cp)
     tp->t_turn = TRUE;
     tp->t_pack = NULL;
     if (ISWEARING(R_AGGR))
-	runto(cp);
+	runto(rs,cp);
     if (type == 'X')
 	tp->t_disguise = rnd_thing();
 }
@@ -116,7 +116,7 @@ exp_add(THING *tp)
  */
 
 void
-wanderer()
+wanderer(struct rogue_state *rs)
 {
     THING *tp;
     static coord cp;
@@ -125,8 +125,8 @@ wanderer()
     do
     {
 	find_floor((struct room *) NULL, &cp, FALSE, TRUE);
-    } while (roomin(&cp) == proom);
-    new_monster(tp, randmonster(TRUE), &cp);
+    } while (roomin(rs,&cp) == proom);
+    new_monster(rs,tp, randmonster(TRUE), &cp);
     if (on(player, SEEMONST))
     {
 	standout();
@@ -136,10 +136,10 @@ wanderer()
 	    addch(rnd(26) + 'A');
 	standend();
     }
-    runto(&tp->t_pos);
+    runto(rs,&tp->t_pos);
 #ifdef MASTER
     if (wizard)
-	msg("started a wandering %s", monsters[tp->t_type-'A'].m_name);
+	msg(rs,"started a wandering %s", monsters[tp->t_type-'A'].m_name);
 #endif
 }
 
@@ -148,7 +148,7 @@ wanderer()
  *	What to do when the hero steps next to a monster
  */
 THING *
-wake_monster(int y, int x)
+wake_monster(struct rogue_state *rs,int y, int x)
 {
     THING *tp;
     struct room *rp;
@@ -156,7 +156,7 @@ wake_monster(int y, int x)
 
 #ifdef MASTER
     if ((tp = moat(y, x)) == NULL)
-	msg("can't find monster in wake_monster");
+	msg(rs,"can't find monster in wake_monster");
 #else
     tp = moat(y, x);
     if (tp == NULL) 	 	 
@@ -188,10 +188,10 @@ wake_monster(int y, int x)
 		    fuse(unconfuse, 0, spread(HUHDURATION), AFTER);
 		player.t_flags |= ISHUH;
 		mname = set_mname(tp);
-		addmsg("%s", mname);
+		addmsg(rs,"%s", mname);
 		if (strcmp(mname, "it") != 0)
-		    addmsg("'");
-		msg("s gaze has confused you");
+		    addmsg(rs,"'");
+		msg(rs,"s gaze has confused you");
 	    }
 	}
     }
@@ -215,10 +215,10 @@ wake_monster(int y, int x)
  */
 
 void
-give_pack(THING *tp)
+give_pack(struct rogue_state *rs,THING *tp)
 {
     if (level >= max_level && rnd(100) < monsters[tp->t_type-'A'].m_carry)
-	attach(tp->t_pack, new_thing());
+	attach(tp->t_pack, new_thing(rs));
 }
 
 /*

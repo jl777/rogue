@@ -21,7 +21,7 @@
  *	Roll her up
  */
 void
-init_player()
+init_player(struct rogue_state *rs)
 {
     register THING *obj;
 
@@ -33,7 +33,7 @@ init_player()
     obj = new_item();
     obj->o_type = FOOD;
     obj->o_count = 1;
-    add_pack(obj, TRUE);
+    add_pack(rs,obj, TRUE);
     /*
      * And his suit of armor
      */
@@ -44,7 +44,7 @@ init_player()
     obj->o_flags |= ISKNOW;
     obj->o_count = 1;
     cur_armor = obj;
-    add_pack(obj, TRUE);
+    add_pack(rs,obj, TRUE);
     /*
      * Give him his weaponry.  First a mace.
      */
@@ -53,7 +53,7 @@ init_player()
     obj->o_hplus = 1;
     obj->o_dplus = 1;
     obj->o_flags |= ISKNOW;
-    add_pack(obj, TRUE);
+    add_pack(rs,obj, TRUE);
     cur_weapon = obj;
     /*
      * Now a +1 bow
@@ -62,7 +62,7 @@ init_player()
     init_weapon(obj, BOW);
     obj->o_hplus = 1;
     obj->o_flags |= ISKNOW;
-    add_pack(obj, TRUE);
+    add_pack(rs,obj, TRUE);
     /*
      * Now some arrows
      */
@@ -70,7 +70,7 @@ init_player()
     init_weapon(obj, ARROW);
     obj->o_count = rnd(15) + 25;
     obj->o_flags |= ISKNOW;
-    add_pack(obj, TRUE);
+    add_pack(rs,obj, TRUE);
 }
 
 /*

@@ -24,7 +24,7 @@
 
 
 void
-look(bool wakeup)
+look(struct rogue_state *rs,bool wakeup)
 {
     int x, y;
     int ch;
@@ -102,7 +102,7 @@ look(bool wakeup)
 		else
 		{
 		    if (wakeup)
-			wake_monster(y, x);
+			wake_monster(rs,y, x);
 		    if (see_monst(tp))
 		    {
 			if (on(player, ISHALU))
@@ -254,7 +254,7 @@ show_floor()
  *	Find the unclaimed object at y, x
  */
 THING *
-find_obj(int y, int x)
+find_obj(struct rogue_state *rs,int y, int x)
 {
     THING *obj;
 
@@ -265,7 +265,7 @@ find_obj(int y, int x)
     }
 #ifdef MASTER
     sprintf(prbuf, "Non-object %d,%d", y, x);
-    msg(prbuf);
+    msg(rs,prbuf);
     return NULL;
 #else
     /* NOTREACHED */
@@ -279,18 +279,18 @@ find_obj(int y, int x)
  */
 
 void
-eat()
+eat(struct rogue_state *rs)
 {
     THING *obj;
 
-    if ((obj = get_item("eat", FOOD)) == NULL)
+    if ((obj = get_item(rs,"eat", FOOD)) == NULL)
 	return;
     if (obj->o_type != FOOD)
     {
 	if (!terse)
-	    msg("ugh, you would get ill if you ate that");
+	    msg(rs,"ugh, you would get ill if you ate that");
 	else
-	    msg("that's Inedible!");
+	    msg(rs,"that's Inedible!");
 	return;
     }
     if (food_left < 0)
@@ -301,17 +301,17 @@ eat()
     if (obj == cur_weapon)
 	cur_weapon = NULL;
     if (obj->o_which == 1)
-	msg("my, that was a yummy %s", fruit);
+	msg(rs,"my, that was a yummy %s", fruit);
     else
 	if (rnd(100) > 70)
 	{
 	    pstats.s_exp++;
-	    msg("%s, this food tastes awful", choose_str("bummer", "yuk"));
-	    check_level();
+	    msg(rs,"%s, this food tastes awful", choose_str("bummer", "yuk"));
+	    check_level(rs);
 	}
 	else
-	    msg("%s, that tasted good", choose_str("oh, wow", "yum"));
-    leave_pack(obj, FALSE, FALSE);
+	    msg(rs,"%s, that tasted good", choose_str("oh, wow", "yum"));
+    leave_pack(rs,obj, FALSE, FALSE);
 }
 
 /*
@@ -320,7 +320,7 @@ eat()
  */
 
 void
-check_level()
+check_level(struct rogue_state *rs)
 {
     int i, add, olevel;
 
@@ -335,7 +335,7 @@ check_level()
 	add = roll(i - olevel, 10);
 	max_hp += add;
 	pstats.s_hpt += add;
-	msg("welcome to level %d", i);
+	msg(rs,"welcome to level %d", i);
     }
 }
 
@@ -380,14 +380,14 @@ add_str(str_t *sp, int amt)
  *	Add a haste to the player
  */
 bool
-add_haste(bool potion)
+add_haste(struct rogue_state *rs,bool potion)
 {
     if (on(player, ISHASTE))
     {
 	no_command += rnd(8);
 	player.t_flags &= ~(ISRUN|ISHASTE);
 	extinguish(nohaste);
-	msg("you faint from exhaustion");
+	msg(rs,"you faint from exhaustion");
 	return FALSE;
     }
     else
@@ -405,12 +405,12 @@ add_haste(bool potion)
  */
 
 void
-aggravate()
+aggravate(struct rogue_state *rs)
 {
     THING *mp;
 
     for (mp = mlist; mp != NULL; mp = next(mp))
-	runto(&mp->t_pos);
+	runto(rs,&mp->t_pos);
 }
 
 /*
@@ -439,7 +439,7 @@ vowelstr(char *str)
  *	See if the object is one of the currently used items
  */
 bool
-is_current(THING *obj)
+is_current(struct rogue_state *rs,THING *obj)
 {
     if (obj == NULL)
 	return FALSE;
@@ -447,8 +447,8 @@ is_current(THING *obj)
 	|| obj == cur_ring[RIGHT])
     {
 	if (!terse)
-	    addmsg("That's already ");
-	msg("in use");
+	    addmsg(rs,"That's already ");
+	msg(rs,"in use");
 	return TRUE;
     }
     return FALSE;
@@ -460,7 +460,7 @@ is_current(THING *obj)
  *	commands
  */
 bool
-get_dir()
+get_dir(struct rogue_state *rs)
 {
     char *prompt;
     bool gotit;
@@ -475,13 +475,13 @@ get_dir()
     else
     {
 	if (!terse)
-	    msg(prompt = "which direction? ");
+	    msg(rs,prompt = "which direction? ");
 	else
 	    prompt = "direction: ";
 	do
 	{
 	    gotit = TRUE;
-	    switch (dir_ch = readchar())
+	    switch (dir_ch = readchar(rs))
 	    {
 		case 'h': case'H': delta.y =  0; delta.x = -1;
 		when 'j': case'J': delta.y =  1; delta.x =  0;
@@ -494,7 +494,7 @@ get_dir()
 		when ESCAPE: last_dir = '\0'; reset_last(); return FALSE;
 		otherwise:
 		    mpos = 0;
-		    msg(prompt);
+		    msg(rs,prompt);
 		    gotit = FALSE;
 	    }
 	} until (gotit);
@@ -543,7 +543,7 @@ spread(int nm)
  */
 
 void
-call_it(struct obj_info *info)
+call_it(struct rogue_state *rs,struct obj_info *info)
 {
     if (info->oi_know)
     {
@@ -555,8 +555,8 @@ call_it(struct obj_info *info)
     }
     else if (!info->oi_guess)
     {
-	msg(terse ? "call it: " : "what do you want to call it? ");
-	if (get_str(prbuf, stdscr) == NORM)
+	msg(rs,terse ? "call it: " : "what do you want to call it? ");
+	if (get_str(rs,prbuf, stdscr) == NORM)
 	{
 	    if (info->oi_guess != NULL)
 		free(info->oi_guess);

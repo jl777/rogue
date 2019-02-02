@@ -61,7 +61,7 @@ static int add_dam[] = {
  *	The player attacks the monster.
  */
 int
-fight(coord *mp, THING *weap, bool thrown)
+fight(struct rogue_state *rs,coord *mp, THING *weap, bool thrown)
 {
     register THING *tp;
     register bool did_hit = TRUE;
@@ -82,7 +82,7 @@ fight(coord *mp, THING *weap, bool thrown)
      */
     count = 0;
     quiet = 0;
-    runto(mp);
+    runto(rs,mp);
     /*
      * Let him know it was really a xeroc (if it was one).
      */
@@ -94,7 +94,7 @@ fight(coord *mp, THING *weap, bool thrown)
 	    ch = (char)(rnd(26) + 'A');
 	    mvaddch(tp->t_pos.y, tp->t_pos.x, ch);
 	}
-	msg(choose_str("heavy!  That's a nasty critter!",
+	msg(rs,choose_str("heavy!  That's a nasty critter!",
 		       "wait!  That's a xeroc!"));
 	if (!thrown)
 	    return FALSE;
@@ -106,29 +106,29 @@ fight(coord *mp, THING *weap, bool thrown)
     {
 	did_hit = FALSE;
 	if (thrown)
-	    thunk(weap, mname, terse);
+	    thunk(rs,weap, mname, terse);
 	else
-	    hit((char *) NULL, mname, terse);
+	    hit(rs,(char *) NULL, mname, terse);
 	if (on(player, CANHUH))
 	{
 	    did_hit = TRUE;
 	    tp->t_flags |= ISHUH;
 	    player.t_flags &= ~CANHUH;
-	    endmsg();
+	    endmsg(rs);
 	    has_hit = FALSE;
-	    msg("your hands stop glowing %s", pick_color("red"));
+	    msg(rs,"your hands stop glowing %s", pick_color("red"));
 	}
 	if (tp->t_stats.s_hpt <= 0)
-	    killed(tp, TRUE);
+	    killed(rs,tp, TRUE);
 	else if (did_hit && !on(player, ISBLIND))
-	    msg("%s appears confused", mname);
+	    msg(rs,"%s appears confused", mname);
 	did_hit = TRUE;
     }
     else
 	if (thrown)
-	    bounce(weap, mname, terse);
+	    bounce(rs,weap, mname, terse);
 	else
-	    miss((char *) NULL, mname, terse);
+	    miss(rs,(char *) NULL, mname, terse);
     return did_hit;
 }
 
@@ -137,7 +137,7 @@ fight(coord *mp, THING *weap, bool thrown)
  *	The monster attacks the player
  */
 int
-attack(THING *mp)
+attack(struct rogue_state *rs,THING *mp)
 {
     register char *mname;
     register int oldhp;
@@ -167,12 +167,12 @@ attack(THING *mp)
 	if (mp->t_type != 'I')
 	{
 	    if (has_hit)
-		addmsg(".  ");
-	    hit(mname, (char *) NULL, FALSE);
+		addmsg(rs,".  ");
+	    hit(rs,mname, (char *) NULL, FALSE);
 	}
 	else
 	    if (has_hit)
-		endmsg();
+		endmsg(rs);
 	has_hit = FALSE;
 	if (pstats.s_hpt <= 0)
 	    death(mp->t_type);	/* Bye bye life ... */
@@ -191,7 +191,7 @@ attack(THING *mp)
 		    /*
 		     * If an aquator hits, you can lose armor class.
 		     */
-		    rust_armor(cur_armor);
+		    rust_armor(rs,cur_armor);
 		when 'I':
 		    /*
 		     * The ice monster freezes you
@@ -199,10 +199,10 @@ attack(THING *mp)
 		    player.t_flags &= ~ISRUN;
 		    if (!no_command)
 		    {
-			addmsg("you are frozen");
+			addmsg(rs,"you are frozen");
 			if (!terse)
-			    addmsg(" by the %s", mname);
-			endmsg();
+			    addmsg(rs," by the %s", mname);
+			endmsg(rs);
 		    }
 		    no_command += rnd(2) + 2;
 		    if (no_command > BORE_LEVEL)
@@ -217,16 +217,16 @@ attack(THING *mp)
 			{
 			    chg_str(-1);
 			    if (!terse)
-				msg("you feel a bite in your leg and now feel weaker");
+				msg(rs,"you feel a bite in your leg and now feel weaker");
 			    else
-				msg("a bite has weakened you");
+				msg(rs,"a bite has weakened you");
 			}
 			else if (!to_death)
 			{
 			    if (!terse)
-				msg("a bite momentarily weakens you");
+				msg(rs,"a bite momentarily weakens you");
 			    else
-				msg("bite has no effect");
+				msg(rs,"bite has no effect");
 			}
 		    }
 		when 'W':
@@ -260,7 +260,7 @@ attack(THING *mp)
 			    pstats.s_hpt = 1;
 			if (max_hp <= 0)
 			    death(mp->t_type);
-			msg("you suddenly feel weaker");
+			msg(rs,"you suddenly feel weaker");
 		    }
 		when 'F':
 		    /*
@@ -283,10 +283,10 @@ attack(THING *mp)
 			purse -= GOLDCALC + GOLDCALC + GOLDCALC + GOLDCALC;
 		    if (purse < 0)
 			purse = 0;
-		    remove_mon(&mp->t_pos, mp, FALSE);
+		    remove_mon(rs,&mp->t_pos, mp, FALSE);
                     mp=NULL;
 		    if (purse != lastpurse)
-			msg("your purse feels lighter");
+			msg(rs,"your purse feels lighter");
 		}
 		when 'N':
 		{
@@ -305,10 +305,10 @@ attack(THING *mp)
 				steal = obj;
 		    if (steal != NULL)
 		    {
-			remove_mon(&mp->t_pos, moat(mp->t_pos.y, mp->t_pos.x), FALSE);
+			remove_mon(rs,&mp->t_pos, moat(mp->t_pos.y, mp->t_pos.x), FALSE);
                         mp=NULL;
-			leave_pack(steal, FALSE, FALSE);
-			msg("she stole %s!", inv_name(steal, TRUE));
+			leave_pack(rs,steal, FALSE, FALSE);
+			msg(rs,"she stole %s!", inv_name(steal, TRUE));
 			discard(steal);
 		    }
 		}
@@ -320,7 +320,7 @@ attack(THING *mp)
     {
 	if (has_hit)
 	{
-	    addmsg(".  ");
+	    addmsg(rs,".  ");
 	    has_hit = FALSE;
 	}
 	if (mp->t_type == 'F')
@@ -329,12 +329,12 @@ attack(THING *mp)
 	    if (pstats.s_hpt <= 0)
 		death(mp->t_type);	/* Bye bye life ... */
 	}
-	miss(mname, (char *) NULL, FALSE);
+	miss(rs,mname, (char *) NULL, FALSE);
     }
     if (fight_flush && !to_death)
 	flush_type();
     count = 0;
-    status();
+    status(rs);
     if (mp == NULL)
         return(-1);
     else
@@ -501,17 +501,17 @@ prname(char *mname, bool upper)
  *	A missile hits a monster
  */
 void
-thunk(THING *weap, char *mname, bool noend)
+thunk(struct rogue_state *rs,THING *weap, char *mname, bool noend)
 {
     if (to_death)
 	return;
     if (weap->o_type == WEAPON)
-	addmsg("the %s hits ", weap_info[weap->o_which].oi_name);
+	addmsg(rs,"the %s hits ", weap_info[weap->o_which].oi_name);
     else
-	addmsg("you hit ");
-    addmsg("%s", mname);
+	addmsg(rs,"you hit ");
+    addmsg(rs,"%s", mname);
     if (!noend)
-	endmsg();
+	endmsg(rs);
 }
 
 /*
@@ -520,7 +520,7 @@ thunk(THING *weap, char *mname, bool noend)
  */
 
 void
-hit(char *er, char *ee, bool noend)
+hit(struct rogue_state *rs,char *er, char *ee, bool noend)
 {
     int i;
     char *s;
@@ -528,7 +528,7 @@ hit(char *er, char *ee, bool noend)
 
     if (to_death)
 	return;
-    addmsg(prname(er, TRUE));
+    addmsg(rs,prname(er, TRUE));
     if (terse)
 	s = " hit";
     else
@@ -538,11 +538,11 @@ hit(char *er, char *ee, bool noend)
 	    i += 4;
 	s = h_names[i];
     }
-    addmsg(s);
+    addmsg(rs,s);
     if (!terse)
-	addmsg(prname(ee, FALSE));
+	addmsg(rs,prname(ee, FALSE));
     if (!noend)
-	endmsg();
+	endmsg(rs);
 }
 
 /*
@@ -550,25 +550,25 @@ hit(char *er, char *ee, bool noend)
  *	Print a message to indicate a poor swing
  */
 void
-miss(char *er, char *ee, bool noend)
+miss(struct rogue_state *rs,char *er, char *ee, bool noend)
 {
     int i;
     extern char *m_names[];
 
     if (to_death)
 	return;
-    addmsg(prname(er, TRUE));
+    addmsg(rs,prname(er, TRUE));
     if (terse)
 	i = 0;
     else
 	i = rnd(4);
     if (er != NULL)
 	i += 4;
-    addmsg(m_names[i]);
+    addmsg(rs,m_names[i]);
     if (!terse)
-	addmsg(" %s", prname(ee, FALSE));
+	addmsg(rs," %s", prname(ee, FALSE));
     if (!noend)
-	endmsg();
+	endmsg(rs);
 }
 
 /*
@@ -576,17 +576,17 @@ miss(char *er, char *ee, bool noend)
  *	A missile misses a monster
  */
 void
-bounce(THING *weap, char *mname, bool noend)
+bounce(struct rogue_state *rs,THING *weap, char *mname, bool noend)
 {
     if (to_death)
 	return;
     if (weap->o_type == WEAPON)
-	addmsg("the %s misses ", weap_info[weap->o_which].oi_name);
+	addmsg(rs,"the %s misses ", weap_info[weap->o_which].oi_name);
     else
-	addmsg("you missed ");
-    addmsg(mname);
+	addmsg(rs,"you missed ");
+    addmsg(rs,mname);
     if (!noend)
-	endmsg();
+	endmsg(rs);
 }
 
 /*
@@ -594,7 +594,7 @@ bounce(THING *weap, char *mname, bool noend)
  *	Remove a monster from the screen
  */
 void
-remove_mon(coord *mp, THING *tp, bool waskill)
+remove_mon(struct rogue_state *rs,coord *mp, THING *tp, bool waskill)
 {
     register THING *obj, *nexti;
 
@@ -604,7 +604,7 @@ remove_mon(coord *mp, THING *tp, bool waskill)
 	obj->o_pos = tp->t_pos;
 	detach(tp->t_pack, obj);
 	if (waskill)
-	    fall(obj, FALSE);
+	    fall(rs,obj, FALSE);
 	else
 	    discard(obj);
     }
@@ -626,7 +626,7 @@ remove_mon(coord *mp, THING *tp, bool waskill)
  *	Called to put a monster to death
  */
 void
-killed(THING *tp, bool pr)
+killed(struct rogue_state *rs,THING *tp, bool pr)
 {
     char *mname;
 
@@ -661,26 +661,26 @@ killed(THING *tp, bool pr)
      * Get rid of the monster.
      */
     mname = set_mname(tp);
-    remove_mon(&tp->t_pos, tp, TRUE);
+    remove_mon(rs,&tp->t_pos, tp, TRUE);
     if (pr)
     {
 	if (has_hit)
 	{
-	    addmsg(".  Defeated ");
+	    addmsg(rs,".  Defeated ");
 	    has_hit = FALSE;
 	}
 	else
 	{
 	    if (!terse)
-		addmsg("you have ");
-	    addmsg("defeated ");
+		addmsg(rs,"you have ");
+	    addmsg(rs,"defeated ");
 	}
-	msg(mname);
+	msg(rs,mname);
     }
     /*
      * Do adjustments if he went up a level
      */
-    check_level();
+    check_level(rs);
     if (fight_flush)
 	flush_type();
 }

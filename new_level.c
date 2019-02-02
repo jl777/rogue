@@ -20,7 +20,7 @@
 #define MINTREAS 2	/* minimum number of treasures in a treasure room */
 
 void
-new_level()
+new_level(struct rogue_state *rs)
 {
     THING *tp;
     PLACE *pp;
@@ -50,10 +50,10 @@ new_level()
      * Throw away stuff left on the previous level (if anything)
      */
     free_list(lvl_obj);
-    do_rooms();				/* Draw rooms */
-    do_passages();			/* Draw passages */
+    do_rooms(rs);				/* Draw rooms */
+    do_passages(rs);			/* Draw passages */
     no_food++;
-    put_things();			/* Place objects (if any) */
+    put_things(rs);			/* Place objects (if any) */
     /*
      * Place the traps
      */
@@ -88,15 +88,15 @@ new_level()
     seenstairs = FALSE;
 
     for (tp = mlist; tp != NULL; tp = next(tp))
-	tp->t_room = roomin(&tp->t_pos);
+	tp->t_room = roomin(rs,&tp->t_pos);
 
     find_floor((struct room *) NULL, &hero, FALSE, TRUE);
-    enter_room(&hero);
+    enter_room(rs,&hero);
     mvaddch(hero.y, hero.x, PLAYER);
     if (on(player, SEEMONST))
 	turn_see(FALSE);
     if (on(player, ISHALU))
-	visuals();
+	visuals(rs,0);
 }
 
 /*
@@ -121,7 +121,7 @@ rnd_room()
  */
 
 void
-put_things()
+put_things(struct rogue_state *rs)
 {
     int i;
     THING *obj;
@@ -136,7 +136,7 @@ put_things()
      * check for treasure rooms, and if so, put it in.
      */
     if (rnd(TREAS_ROOM) == 0)
-	treas_room();
+	treas_room(rs);
     /*
      * Do MAXOBJ attempts to put things on a level
      */
@@ -146,7 +146,7 @@ put_things()
 	    /*
 	     * Pick a new object and link it in the list
 	     */
-	    obj = new_thing();
+	    obj = new_thing(rs);
 	    attach(lvl_obj, obj);
 	    /*
 	     * Put it somewhere
@@ -184,7 +184,7 @@ put_things()
 
 
 void
-treas_room()
+treas_room(struct rogue_state *rs)
 {
     int nm;
     THING *tp;
@@ -200,7 +200,7 @@ treas_room()
     while (nm--)
     {
 	find_floor(rp, &mp, 2 * MAXTRIES, FALSE);
-	tp = new_thing();
+	tp = new_thing(rs);
 	tp->o_pos = mp;
 	attach(lvl_obj, tp);
 	chat(mp.y, mp.x) = (char) tp->o_type;
@@ -222,9 +222,9 @@ treas_room()
 	if (find_floor(rp, &mp, MAXTRIES, TRUE))
 	{
 	    tp = new_item();
-	    new_monster(tp, randmonster(FALSE), &mp);
+	    new_monster(rs,tp, randmonster(FALSE), &mp);
 	    tp->t_flags |= ISMEAN;	/* no sloughers in THIS room */
-	    give_pack(tp);
+	    give_pack(rs,tp);
 	}
     }
     level--;
