@@ -275,11 +275,9 @@ inventory(struct rogue_state *rs,THING *list, int type)
     if (n_objs == 0)
     {
 	if (terse)
-	    msg(rs,type == 0 ? "empty handed" :
-			    "nothing appropriate");
+	    msg(rs,type == 0 ? (char *)"empty handed" : (char *)"nothing appropriate");
 	else
-	    msg(rs,type == 0 ? "you are empty handed" :
-			    "you don't have anything appropriate");
+	    msg(rs,type == 0 ? (char *)"you are empty handed" : (char *)"you don't have anything appropriate");
 	return FALSE;
     }
     end_line(rs);
@@ -360,7 +358,7 @@ picky_inven(struct rogue_state *rs)
 	msg(rs,"a) %s", inv_name(pack, FALSE));
     else
     {
-	msg(rs,terse ? "item: " : "which item do you wish to inventory: ");
+	msg(rs,terse ? (char *)"item: " : (char *)"which item do you wish to inventory: ");
 	mpos = 0;
 	if ((mch = readchar(rs)) == ESCAPE)
 	{

@@ -10,6 +10,8 @@
  * See the file LICENSE.TXT for full copyright and licensing information.
  */
 
+#ifndef H_EXTERN_ROGUE_H
+#define H_EXTERN_ROGUE_H
 
 #ifdef HAVE_CONFIG_H
 #ifdef PDCURSES
@@ -18,6 +20,7 @@
 #undef HAVE_MEMORY_H
 #undef HAVE_STRING_H
 #endif
+#include <stdint.h>
 #include "config.h"
 #elif defined(__DJGPP__)
 #define HAVE_SYS_TYPES_H 1
@@ -178,4 +181,5 @@ void md_onsignal_autosave(void);
 void md_onsignal_exit(void);
 void md_onsignal_default(void);
 int md_issymlink(char *sp);
+#endif
 
