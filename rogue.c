@@ -107,9 +107,11 @@ long get_filesize(FILE *fp)
     return(fsize);
 }
 
-int32_t rogue_replay(uint64_t seed)
+int32_t rogue_replay(uint64_t seed,int32_t sleeptime)
 {
     FILE *fp; char fname[1024]; char *keystrokes = 0; long num=0,fsize; int32_t i,counter = 0; struct rogue_state *rs;
+    if ( seed == 0 )
+        seed = 777;
     while ( 1 )
     {
         roguefname(fname,seed,counter);
@@ -143,6 +145,7 @@ int32_t rogue_replay(uint64_t seed)
         rs->seed = seed;
         rs->keystrokes = keystrokes;
         rs->numkeys = num;
+        rs->sleeptime = sleeptime;
         rogueiterate(rs);
         if ( (fp= fopen("checkfile","wb")) != 0 )
         {
@@ -155,7 +158,10 @@ int32_t rogue_replay(uint64_t seed)
                 fclose(fp);
             }
         }
-        fatal("finished replay\n");
+        free(rs);
+        mvaddstr(LINES - 2, 0, (char *)"replay completed");
+        refresh();
+        endwin();
     }
     if ( keystrokes != 0 )
         free(keystrokes);
@@ -380,7 +386,7 @@ playit(struct rogue_state *rs)
     }
 
     if (md_hasclreol())
-	inv_type = INV_CLEAR;
+        inv_type = INV_CLEAR;
 
     /*
      * parse environment declaration of options
@@ -401,7 +407,8 @@ playit(struct rogue_state *rs)
                 //fprintf(stderr,"replaydone\n"); sleep(3);
                 return;
             }
-            usleep(50000);
+            if ( rs->sleeptime != 0 )
+                usleep(rs->sleeptime);
         }
         else
         {
