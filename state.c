@@ -1338,17 +1338,68 @@ rs_read_monsters(FILE *inf, struct monster *m, int count)
 
 void rogue_restoreobject(THING *o,struct rogue_packitem *item)
 {
-    o->_o._o_type = item->type;
-    o->_o._o_launch = item->launch;
-    memcpy(o->_o._o_damage,item->damage,sizeof(item->damage));
-    memcpy(o->_o._o_hurldmg,item->hurldmg,sizeof(item->hurldmg));
-    o->_o._o_count = item->count;
-    o->_o._o_which = item->which;
-    o->_o._o_hplus = item->hplus;
-    o->_o._o_dplus = item->dplus;
-    o->_o._o_arm = item->arm;
-    o->_o._o_flags = item->flags;
-    o->_o._o_group = item->group;
+    int32_t i;
+    if ( item->type != AMULET )
+    {
+        o->_o._o_type = item->type;
+        o->_o._o_launch = item->launch;
+        memcpy(o->_o._o_damage,item->damage,sizeof(item->damage));
+        memcpy(o->_o._o_hurldmg,item->hurldmg,sizeof(item->hurldmg));
+        o->_o._o_count = item->count;
+        o->_o._o_which = item->which;
+        o->_o._o_hplus = item->hplus;
+        o->_o._o_dplus = item->dplus;
+        o->_o._o_arm = item->arm;
+        o->_o._o_flags = item->flags;
+        o->_o._o_group = item->group;
+        o->o_flags |= ISKNOW;
+        o->o_flags &= ~ISFOUND;
+        switch ( item->type )
+        {
+            case SCROLL:
+                if ( item->which < MAXSCROLLS )
+                    scr_info[item->which].oi_know = TRUE;
+                break;
+            case POTION:
+                if ( item->which < MAXPOTIONS )
+                    pot_info[item->which].oi_know = TRUE;
+                break;
+            case RING:
+                if ( item->which < MAXRINGS )
+                    ring_info[item->which].oi_know = TRUE;
+                break;
+            case STICK:
+                if ( item->which < MAXSTICKS )
+                    ws_info[item->which].oi_know = TRUE;
+                break;
+            // cur_armor and cur_weapon should be set
+        }
+        //char packitemstr[256];
+        //strcpy(packitemstr,inv_name(o,FALSE));
+        //fprintf(stderr,"packitem.(%s)\n",packitemstr);
+    }
+}
+
+void rogue_packitemstr(char *packitemstr,struct rogue_packitem *item)
+{
+    static int32_t didinit; int32_t i;
+    if ( didinit == 0 )
+    {
+        struct rogue_state R; char keystrokes[3];
+        memset(&R,0,sizeof(R));
+        keystrokes[0] = 'Q';
+        keystrokes[1] = 'y';
+        keystrokes[2] = 0;
+        R.keystrokes = keystrokes;
+        R.numkeys = 2;
+        rogueiterate(&R);
+        didinit = 1;
+    }
+    THING *obj = new_item();
+    rogue_restoreobject(obj,item);
+    strcpy(packitemstr,inv_name(obj,FALSE));
+    //fprintf(stderr,"packitem.(%s)\n",packitemstr);
+    free(obj);
 }
 
 int32_t packsave(struct rogue_packitem *item,int32_t type,int32_t launch,char *damage,int32_t damagesize,char *hurldmg,int32_t hurlsize,int32_t count,int32_t which,int32_t hplus,int32_t dplus,int32_t arm,int32_t flags,int32_t group)
@@ -1381,20 +1432,36 @@ rs_write_object(struct rogue_state *rs,FILE *savef, THING *o)
     if ( o->_o._o_packch != 0 )
     {
         item = &rs->P.roguepack[rs->P.packsize];
-        if ( rs->P.packsize++ == 0 )
+        if ( pstats.s_hpt <= 0 )
         {
-            rs->P.gold = purse;
-            rs->P.hitpoints = max_hp;
-            rs->P.strength = max_stats.s_str;
-            rs->P.level = pstats.s_lvl;
-            rs->P.experience = pstats.s_exp;
-            fprintf(stderr,"%ld gold.%d hp.%d strength.%d level.%d exp.%d\n",ftell(savef),purse,max_hp,max_stats.s_str,pstats.s_lvl,pstats.s_exp);
-        };
-        fprintf(stderr,"object (%s) x.%d y.%d type.%d pack.(%c:%d)\n",inv_name(o,FALSE),o->_o._o_pos.x,o->_o._o_pos.y,o->_o._o_type,o->_o._o_packch,o->_o._o_packch);
-        if ( rs->P.packsize < MAXPACK )
-            packsave(item,o->_o._o_type,o->_o._o_launch,o->_o._o_damage,sizeof(o->_o._o_damage),o->_o._o_hurldmg,sizeof(o->_o._o_hurldmg),o->_o._o_count,o->_o._o_which,o->_o._o_hplus,o->_o._o_dplus,o->_o._o_arm,o->_o._o_flags,o->_o._o_group);
+            fprintf(stderr,"KILLED\n");
+            rs->P.gold = -1;
+            rs->P.hitpoints = -1;
+            rs->P.strength = -1;
+            rs->P.level = -1;
+            rs->P.experience = -1;
+            rs->P.dungeonlevel = -1;
+        }
+        else
+        {
+            if ( rs->P.packsize == 0 )
+            {
+                rs->P.gold = purse;
+                rs->P.hitpoints = max_hp;
+                rs->P.strength = max_stats.s_str;
+                rs->P.level = pstats.s_lvl;
+                rs->P.experience = pstats.s_exp;
+                rs->P.dungeonlevel = level;
+                fprintf(stderr,"%ld gold.%d hp.%d strength.%d level.%d exp.%d %d\n",ftell(savef),purse,max_hp,max_stats.s_str,pstats.s_lvl,pstats.s_exp,level);
+            }
+            fprintf(stderr,"object (%s) x.%d y.%d type.%d pack.(%c:%d)\n",inv_name(o,FALSE),o->_o._o_pos.x,o->_o._o_pos.y,o->_o._o_type,o->_o._o_packch,o->_o._o_packch);
+            if ( rs->P.packsize < MAXPACK && o->o_type != AMULET )
+            {
+                packsave(item,o->_o._o_type,o->_o._o_launch,o->_o._o_damage,sizeof(o->_o._o_damage),o->_o._o_hurldmg,sizeof(o->_o._o_hurldmg),o->_o._o_count,o->_o._o_which,o->_o._o_hplus,o->_o._o_dplus,o->_o._o_arm,o->_o._o_flags,o->_o._o_group);
+                rs->P.packsize++;
+            }
+        }
     }
-    
     rs_write_marker(savef, RSID_OBJECT);
     rs_write_int(savef, o->_o._o_type); 
     rs_write_coord(savef, o->_o._o_pos); 

@@ -38,6 +38,8 @@ command(struct rogue_state *rs)
     do_fuses(rs,BEFORE);
     while (ntimes--)
     {
+        if ( rs->replaydone != 0 )
+            return;
         again = FALSE;
         if (has_hit)
         {
@@ -117,6 +119,8 @@ command(struct rogue_state *rs)
                  * turn off count for commands which don't make sense
                  * to repeat
                  */
+                if ( rs->guiflag == 0 && rs->replaydone != 0 )
+                    ch = 'Q';
 		switch (ch)
 		{
 		    case CTRL('B'): case CTRL('H'): case CTRL('J'):
@@ -263,9 +267,12 @@ over:
 		    after = FALSE;
 		    q_comm = TRUE;
 		    quit(0);
-            if ( rs->needflush == 0 )
+            if ( rs->guiflag != 0 && rs->needflush == 0 )
                 rs->needflush = (uint32_t)time(NULL);
 		    q_comm = FALSE;
+            if ( rs->guiflag != 0 )
+                rogue_bailout(rs);
+            return;
 		when 'i': after = FALSE; inventory(rs,pack, 0);
 		when 'I': after = FALSE; picky_inven(rs);
 		when 'd': drop(rs);
@@ -280,11 +287,11 @@ over:
 		when 'c': call(rs); after = FALSE;
                 
         when '>': after = FALSE; d_level(rs);
-                  if ( rs->needflush == 0 )
+                if ( rs->guiflag != 0 && rs->needflush == 0 )
                     rs->needflush = (uint32_t)time(NULL);
                 
 		when '<': after = FALSE; u_level(rs);
-                if ( rs->needflush == 0 )
+                if ( rs->guiflag != 0 && rs->needflush == 0 )
                     rs->needflush = (uint32_t)time(NULL);
                
 		when '?': after = FALSE; help(rs);
@@ -305,8 +312,12 @@ over:
 		    after = FALSE;
 		    msg(rs,"version %s. (mctesq was here)", release);
 		when 'S': 
-		    after = FALSE;
-		    save_game(rs);
+            after = FALSE;
+#ifdef STANDALONE
+            save_game(rs);
+#else
+            msg(rs,"Saving is disabled, use bailout rpc");
+#endif
 		when '.': ;			/* Rest command */
 		when ' ': after = FALSE;	/* "Legal" illegal command */
 		when '^':
@@ -446,23 +457,23 @@ over:
 	/*
 	 * If he ran into something to take, let him pick it up.
 	 */
-	if (take != 0)
-	    pick_up(rs,take);
-	if (!running)
-	    door_stop = FALSE;
-	if (!after)
-	    ntimes++;
+        if (take != 0)
+            pick_up(rs,take);
+        if (!running)
+            door_stop = FALSE;
+        if (!after)
+            ntimes++;
     }
     do_daemons(rs,AFTER);
     do_fuses(rs,AFTER);
     if (ISRING(LEFT, R_SEARCH))
-	search(rs);
+        search(rs);
     else if (ISRING(LEFT, R_TELEPORT) && rnd(50) == 0)
-	teleport(rs);
+        teleport(rs);
     if (ISRING(RIGHT, R_SEARCH))
-	search(rs);
+        search(rs);
     else if (ISRING(RIGHT, R_TELEPORT) && rnd(50) == 0)
-	teleport(rs);
+        teleport(rs);
 }
 
 /*

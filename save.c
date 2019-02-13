@@ -22,7 +22,7 @@
 
 typedef struct stat STAT;
 
-extern char version[], encstr[];
+extern char *version, *encstr;
 
 static STAT sbuf;
 
@@ -167,7 +167,9 @@ save_file(struct rogue_state *rs,FILE *savef,int32_t guiflag)
     {
         fprintf(stderr,"%02x",((uint8_t *)&rs->P)[i]);
         histo[((uint8_t *)&rs->P)[i]]++;
+        rs->playerdata[i] = ((uint8_t *)&rs->P)[i];
     }
+    rs->playersize = n;
     fprintf(stderr," packsize.%d n.%d\n",rs->P.packsize,n);
     if ( (fp= fopen(rogue_packfname(rs,fname),"wb")) != 0 )
     {
@@ -331,7 +333,7 @@ encwrite(char *start, size_t size, FILE *outf)
 {
     char *e1, *e2, fb;
     int temp;
-    extern char statlist[];
+    extern char *statlist;
     size_t o_size = size;
     e1 = encstr;
     e2 = statlist;
@@ -369,7 +371,7 @@ encread(char *start, size_t size, FILE *inf)
     char *e1, *e2, fb;
     int temp;
     size_t read_size;
-    extern char statlist[];
+    extern char *statlist;
 
     fb = 0;
 

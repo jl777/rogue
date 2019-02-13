@@ -46,12 +46,14 @@ static char *rip[] = {
 /* VARARGS2 */
 
 void
-score(int amount, int flags, char monst)
+score(struct rogue_state *rs,int amount, int flags, char monst)
 {
     SCORE *scp;
     int i;
     SCORE *sc2;
     SCORE *top_ten, *endp;
+    if ( rs->guiflag == 0 )
+        return;
 # ifdef MASTER
     int prflags = 0;
 # endif
@@ -227,13 +229,18 @@ score(int amount, int flags, char monst)
  */
 
 void
-death(char monst)
+death(struct rogue_state *rs,char monst)
 {
     char **dp, *killer;
     struct tm *lt;
     static time_t date;
     //struct tm *localtime(const time_t *);
-
+    if ( rs->guiflag == 0 )
+    {
+        fprintf(stderr,"death during replay\n");
+        rs->replaydone = (uint32_t)time(NULL);
+        return;
+    }
     signal(SIGINT, SIG_IGN);
     purse -= purse / 10;
     signal(SIGINT, leave);
@@ -269,7 +276,8 @@ death(char monst)
     }
     move(LINES - 1, 0);
     refresh();
-    score(purse, amulet ? 3 : 0, monst);
+    score(rs,purse, amulet ? 3 : 0, monst);
+    rogue_bailout(rs);
     printf("[Press return to continue]");
     fflush(stdout);
     if ( fgets(prbuf,10,stdin) != 0 )
@@ -384,7 +392,7 @@ total_winner(struct rogue_state *rs)
     }
     printw("   %5d  Gold Pieces          ", oldpurse);
     refresh();
-    score(purse, 2, ' ');
+    score(rs,purse, 2, ' ');
     my_exit(0);
 }
 

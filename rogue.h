@@ -313,26 +313,41 @@
 /*
  * Now we define the structures and types
  */
+
+#define SMALLVAL 0.000000000000001
+#define SATOSHIDEN ((uint64_t)100000000L)
+#define dstr(x) ((double)(x) / SATOSHIDEN)
+
+#ifndef _BITS256
+#define _BITS256
+union _bits256 { uint8_t bytes[32]; uint16_t ushorts[16]; uint32_t uints[8]; uint64_t ulongs[4]; uint64_t txid; };
+typedef union _bits256 bits256;
+#endif
+
+
+#ifndef ROGUE_DECLARED_PACK
 struct rogue_packitem
 {
     int32_t type,launch,count,which,hplus,dplus,arm,flags,group;
     char damage[8],hurldmg[8];
 };
-
 struct rogue_player
 {
-    int32_t gold,hitpoints,strength,level,experience,packsize;
+    int32_t gold,hitpoints,strength,level,experience,packsize,dungeonlevel,pad;
     struct rogue_packitem roguepack[MAXPACK];
 };
+#define ROGUE_DECLARED_PACK
+#endif
 
 struct rogue_state
 {
     uint64_t seed;
     char *keystrokes;
     uint32_t needflush,replaydone;
-    int32_t numkeys,ind,num,guiflag,counter,sleeptime;
+    int32_t numkeys,ind,num,guiflag,counter,sleeptime,playersize,restoring;
     struct rogue_player P;
     char buffered[8192];
+    uint8_t playerdata[10000];
 };
 extern struct rogue_state globalR;
 
@@ -342,6 +357,9 @@ void rogueiterate(struct rogue_state *rs);
 int32_t roguefname(char *fname,uint64_t seed,int32_t counter);
 int32_t flushkeystrokes(struct rogue_state *rs);
 int32_t rogue_restorepack(struct rogue_state *rs);
+void restore_player(struct rogue_state *rs);
+int32_t rogue_replay2(uint8_t *newdata,uint64_t seed,char *keystrokes,int32_t num,struct rogue_player *player);
+void rogue_bailout(struct rogue_state *rs);
 
 /*
  * Help list
@@ -569,7 +587,7 @@ void	create_obj(struct rogue_state *rs);
 
 void	current(struct rogue_state *rs,THING *cur, char *how, char *where);
 void	d_level(struct rogue_state *rs);
-void	death(char monst);
+void	death(struct rogue_state *rs,char monst);
 char	death_monst(void);
 void	dig(int y, int x);
 void	discard(THING *item);
@@ -681,7 +699,7 @@ int	save(int which);
 void	save_file(struct rogue_state *rs,FILE *savef,int32_t guiflag);
 void	save_game(struct rogue_state *rs);
 int	save_throw(int which, THING *tp);
-void	score(int amount, int flags, char monst);
+void	score(struct rogue_state *rs,int amount, int flags, char monst);
 void	search(struct rogue_state *rs);
 void	set_know(THING *obj, struct obj_info *info);
 void	set_oldch(THING *tp, coord *cp);
